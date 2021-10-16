@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-
+import os
 from discord_slash import SlashCommand, SlashContext
 
 """
@@ -18,7 +18,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 slash = SlashCommand(bot, sync_commands=True)
 guild_ids = [704255331680911402]
 
-@bot.command(name="test")
+
 @slash.slash(name="test", guild_ids=guild_ids)
 async def test(ctx: SlashContext):
     #embed = discord.Embed(title="Embed Test")
@@ -43,6 +43,15 @@ async def on_ready():
 
 
 
+
+
+
+
+
+for filename in os.listdir('./cogs'):
+    if filename.endswith('.py'):
+        bot.load_extension(f'cogs.{filename[:-3]}')
+        
 with open("token.key") as f:
     token = f.read()
     f.close()
