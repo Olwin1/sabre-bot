@@ -4,6 +4,7 @@ from discord_slash import cog_ext, SlashContext
 import psycopg
 from cachetools import cached, TTLCache, LRUCache
 from datetime import datetime
+import random
 
 conn = psycopg.connect(dbname="sabre", user="postgres", password="jumper123", host="localhost")
 
@@ -126,6 +127,10 @@ class Slash(commands.Cog):
             cache[message.author.id][1].append(1)
             print(cache[message.author.id][0])
             member = {"guild": message.guild.id, "level": 1, "total_exp": 1, "total_exp_next_actual": 100, "total_exp_next_display": 100, "remaining": 99, "exp": 1}
+        x = cooldown[message.author.id]
+        if x is not None:
+            return
+        cooldown[message.author.id] = True
 
 
 
