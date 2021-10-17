@@ -78,6 +78,12 @@ class Slash(commands.Cog):
 
                 member = {"guild": user["guilds"][i], "level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
                 #guild, level, total_exp, total_exp_next_actual, total_exp_next_display, remaining
+        if not passed:
+            print(cache[ctx.author.id][0])
+            cache[ctx.author.id][0].append(ctx.guild.id)
+            cache[ctx.author.id][1].append(1)
+            print(cache[ctx.author.id][0])
+            member = {"guild": ctx.guild.id, "level": 1, "total_exp": 1, "total_exp_next_actual": 100, "total_exp_next_display": 100, "remaining": 99, "exp": 1}
         await ctx.send(f'Level is: **{member["level"]}** Exp To Next Level Is: **{member["total_exp_next_display"]}** Remaining Exp is: **{member["remaining"]}** Your Exp Is **{member["exp"]}**')
 
 
@@ -105,9 +111,6 @@ class Slash(commands.Cog):
 
 
 
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        print(error)
         
 
 

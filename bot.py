@@ -54,7 +54,7 @@ async def on_slash_command_error(ctx: SlashContext, ex):
 
 @bot.event
 async def on_command_error(ctx, error):
-    await print("OH NOES (basic)!", error)
+    print("OH NOES (basic)!", error)
     await ctx.send(error)
 
 
