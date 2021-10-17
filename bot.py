@@ -41,6 +41,23 @@ async def on_ready():
     print(f'Successfully logged in and booted...!')
 
 
+@bot.event
+async def on_component_callback_error(ctx: SlashContext, ex):
+    await print("OH NOES!", ex)
+    await ctx.send(ex)
+
+
+@bot.event
+async def on_slash_command_error(ctx: SlashContext, ex):
+    await print("OH NOES!", ex)
+    await ctx.send(ex)
+
+@bot.event
+async def on_command_error(ctx, error):
+    await print("OH NOES (basic)!", error)
+    await ctx.send(error)
+
+
 
 
 
