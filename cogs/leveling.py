@@ -87,6 +87,75 @@ class Slash(commands.Cog):
         await ctx.send(f'Level is: **{member["level"]}** Exp To Next Level Is: **{member["total_exp_next_display"]}** Remaining Exp is: **{member["remaining"]}** Your Exp Is **{member["exp"]}**')
 
 
+
+
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author == self.bot.user:
+            return
+
+        user = getcache_leveling(message.author.id, message.guild.id)
+        user = {"guilds": user[0], "exp": user[1]}
+        passed = False
+        for i in range(len(user["guilds"])):
+            if user["guilds"][i] == message.guild.id:
+                passed = True
+                total_exp = user["exp"][i]
+                exp = total_exp
+                x = exp
+                y = 0
+                level = 0
+                while exp > 0:
+                    x = 5*(level**2)+50*level+100
+                    y += x
+                    exp -= x
+                    print(x, level)
+                    level += 1
+                #Below Is What Happens After
+                total_exp_next_display = x
+                total_exp_next_actual = y
+                remaining = total_exp_next_actual - total_exp
+                print("final", total_exp_next_display, level, total_exp_next_actual, remaining)
+
+                member = {"guild": user["guilds"][i], "level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
+                #guild, level, total_exp, total_exp_next_actual, total_exp_next_display, remaining
+        if not passed:
+            print(cache[message.author.id][0])
+            cache[message.author.id][0].append(message.guild.id)
+            cache[message.author.id][1].append(1)
+            print(cache[message.author.id][0])
+            member = {"guild": message.guild.id, "level": 1, "total_exp": 1, "total_exp_next_actual": 100, "total_exp_next_display": 100, "remaining": 99, "exp": 1}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Cache Operations Are Below Here
+#Please Note that cache.clear() breaks it so do not EVER use. Iterate Through Cache.pop when shutting down.
     @cog_ext.cog_slash(name="cacheclear", guild_ids=guild_ids)
     async def _cacheclear(self, ctx:SlashContext):
         await ctx.send("Clearing Cache...")
