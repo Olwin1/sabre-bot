@@ -102,6 +102,7 @@ class Slash(commands.Cog):
         for i in range(len(user["guilds"])):
             if user["guilds"][i] == message.guild.id:
                 passed = True
+                iteration = i
                 total_exp = user["exp"][i]
                 exp = total_exp
                 x = exp
@@ -125,12 +126,19 @@ class Slash(commands.Cog):
             print(cache[message.author.id][0])
             cache[message.author.id][0].append(message.guild.id)
             cache[message.author.id][1].append(1)
+            for i in range(len(cache[message.author.id][0])):
+                if cache[message.author.id[0][i]] == message.guild.id:
+                    iteration = i
             print(cache[message.author.id][0])
             member = {"guild": message.guild.id, "level": 1, "total_exp": 1, "total_exp_next_actual": 100, "total_exp_next_display": 100, "remaining": 99, "exp": 1}
-        x = cooldown[message.author.id]
+        x = cooldown.get(message.author.id)
         if x is not None:
             return
         cooldown[message.author.id] = True
+        increase = random.randint(15, 20)
+        cache[message.author.id][1][iteration] += increase
+        if increase >= remaining:
+            await message.channel.send(f"**{message.author.name}** Has Leveled Up To Level **{member['level'] + 1}**!")
 
 
 
