@@ -60,9 +60,11 @@ class Slash(commands.Cog):
 
 
     @cog_ext.cog_slash(name="rank", guild_ids=guild_ids)
-    async def _rank(self, ctx: SlashContext):
-
-        author = ctx.author
+    async def _rank(self, ctx: SlashContext, member: discord.Member=None):
+        if member is None:
+            author = ctx.author
+        else:
+            author = member
         user = getcache_leveling(author.id, ctx.guild.id)
         user = {"guilds": user[0], "exp": user[1]}
         passed = False
@@ -236,7 +238,6 @@ class Slash(commands.Cog):
                     x = 5*(level**2)+50*level+100
                     y += x
                     exp -= x
-                    print(x, level)
                     level += 1
                 #Below Is What Happens After
                 total_exp_next_display = x
