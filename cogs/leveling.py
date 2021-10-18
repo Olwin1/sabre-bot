@@ -50,7 +50,12 @@ class Slash(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         
-    
+    def __del__(self):
+        print("Clearing Cache")
+        for i in range(cache.currsize):
+            print(i)
+            cache.popitem()
+        print("Cache Has Been Emptied")
 
 
     @commands.command(name="cogt")
