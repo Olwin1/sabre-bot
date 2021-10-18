@@ -1,13 +1,13 @@
-import discord
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-import psycopg
-from cachetools import cached, TTLCache, LRUCache
-from datetime import datetime
-import random
-from PIL import Image, ImageDraw, ImageFont
-from discord import File
 import io
+import random
+
+import discord
+import psycopg
+from cachetools import LRUCache, TTLCache
+from discord import File
+from discord.ext import commands
+from discord_slash import SlashContext, cog_ext
+from PIL import Image, ImageDraw, ImageFont
 
 conn = psycopg.connect(dbname="sabre", user="postgres", password="jumper123", host="localhost")
 
@@ -113,7 +113,6 @@ class Slash(commands.Cog):
 
         image = background_image.copy()
 
-        image_width, image_height = image.size
 
         # --- draw on image ---
 
@@ -211,7 +210,7 @@ class Slash(commands.Cog):
         buffer_output.seek(0)
 
         # send image
-        await ctx.send(file=File(buffer_output, 'image.png'))
+        await ctx.send(file=File(buffer_output, 'card.png'))
 
 
 
@@ -271,31 +270,11 @@ class Slash(commands.Cog):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #Cache Operations Are Below Here
 #Please Note that cache.clear() breaks it so do not EVER use. Iterate Through Cache.pop when shutting down.
-    @cog_ext.cog_slash(name="cacheclear", guild_ids=guild_ids)
-    async def _cacheclear(self, ctx:SlashContext):
+    @commands.is_owner()
+    @commands.command(name="cacheclear")
+    async def _cacheclear(self, ctx):
         await ctx.send("Clearing Cache...")
         for i in range(cache.currsize):
             print(i)
@@ -303,15 +282,16 @@ class Slash(commands.Cog):
         await ctx.send("Cache Has Been Emptied")
 
 
-    @cog_ext.cog_slash(name="cache", guild_ids=guild_ids)
-    async def _cache(self, ctx:SlashContext):
+    @commands.is_owner()
+    @commands.command(name="cache")
+    async def _cache(self, ctx):
         await ctx.send("Printing Cache...")
         print(cache)
 
 
-
-    @cog_ext.cog_slash(name="cachepop", guild_ids=guild_ids)
-    async def _cachepop(self, ctx:SlashContext):
+    @commands.is_owner()
+    @commands.command(name="cachepop")
+    async def _cachepop(self, ctx):
         print(cache)
         await ctx.send("Popping Cache...")
         cache.popitem()
