@@ -1,5 +1,7 @@
 import io
 import random
+import socket
+import threading
 
 import discord
 import psycopg
@@ -8,6 +10,32 @@ from discord import File
 from discord.ext import commands
 from discord_slash import SlashContext, cog_ext
 from PIL import Image, ImageDraw, ImageFont
+
+
+def worker():
+    """thread worker function"""
+    print('Worker')
+    HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
+    PORT = 63431        # Port to listen on (non-privileged ports are > 1023)
+    
+        
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.listen()
+        conn, addr = s.accept()
+        with conn:
+            print('Connected by', addr)
+            while True:
+                data = conn.recv(1024)
+                if not data:
+                    break
+                conn.sendall(data)
+
+
+threads = []
+t = threading.Thread(target=worker)
+threads.append(t)
+t.start()
 
 conn = psycopg.connect(dbname="sabre", user="postgres", password="***REMOVED***", host="localhost")
 
