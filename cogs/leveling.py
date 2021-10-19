@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFont
 def worker():
     """thread worker function"""
     print('Worker')
-    HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
+    HOST = 'localhost'  # Standard loopback interface address (localhost)
     PORT = 63431        # Port to listen on (non-privileged ports are > 1023)
     
         
