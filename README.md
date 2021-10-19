@@ -8,3 +8,4 @@ discord.py
 discord-py-slash-command
 cachetools
 psycopg
+Pillow
