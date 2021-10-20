@@ -22,14 +22,13 @@ def worker():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
         s.listen()
-        conn, addr = s.accept()
-        with conn:
+        connection, addr = s.accept()
+        with connection:
             print('Connected by', addr)
             while True:
-                data = conn.recv(1024)
-                if not data:
-                    break
-                conn.sendall(data)
+                data = connection.recv(1024)
+                if data:
+                    connection.sendall(data)
 
 
 threads = []
