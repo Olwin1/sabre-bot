@@ -60,7 +60,7 @@ guild_ids = [704255331680911402]
 print("levleing is runnin")
 cooldown = TTLCache(maxsize=1024, ttl=20)
 
-class SabreCache(LRUCache):
+class MemberCache(LRUCache):# Handles Deletions Of Member Rows
   def popitem(self):
     cur = conn.cursor()
     if super().currsize == 0:
@@ -73,10 +73,24 @@ class SabreCache(LRUCache):
     return key, value
 
 
+class GuildCache(LRUCache):# Handles Deletions Of Guild Rows
+  def popitem(self):
+    cur = conn.cursor()
+    if super().currsize == 0:
+        return None, None
+    key, value = super().popitem()
+    print('Key "%s" evicted with value "%s"' % (key, value))
+    cur.execute("UPDATE guilds SET role_rewards = %s WHERE guild_id=%s", (value["role_rewards"], key))#IF A NEW COLUMN REMEMBER TO ADD IT
+    conn.commit()
+    return key, value
 
-cache = SabreCache(maxsize=100)
 
-@cached(cache=TTLCache(maxsize=1024, ttl=3600))
+
+
+member_cache = MemberCache(maxsize=100)# Actual Creation Of The Member and Guild Cache
+guild_cache = GuildCache(maxsize=100)
+
+@cached(cache=TTLCache(maxsize=1024, ttl=3600))# Cache To Store Member's Rank Compared To Others.  Instead Of Updating Just Deletes It After 60 Mins And Re-Orders It When Needed.
 def get_member_rank(key):
     cur = conn.cursor()
     key = key.split(":")
@@ -87,9 +101,9 @@ def get_member_rank(key):
             return i + 1
     return 999
 
-# This Function Gets The User Data From The Cache. IF It Is Not In The Cache It Fetches It and If It Cannot Be Found It Creates It.
+# This Function Gets The Member Data From The Cache. IF It Is Not In The Cache It Fetches It and If It Cannot Be Found It Creates It.
 def get_member(user_id, guild_id):
-    retval = cache.get(f"{user_id}:{guild_id}")
+    retval = member_cache.get(f"{user_id}:{guild_id}")
     if retval is None:
 
         cur = conn.cursor()
@@ -115,7 +129,7 @@ def get_member(user_id, guild_id):
             cur.execute("SELECT exp FROM members WHERE user_id=%s and guild_id=%s", (user_id, guild_id))
             selected = cur.fetchone()
             retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0]}
-            cache[f"{user_id}:{guild_id}"] = retval
+            member_cache[f"{user_id}:{guild_id}"] = retval
         if selected[0] is None:# If EXP Is Not Exist
             cur.execute("UPDATE members SET exp = %s WHERE user_id=%s AND guild_id=%s", (1,user_id,guild_id))
             conn.commit()
@@ -123,9 +137,33 @@ def get_member(user_id, guild_id):
             selected = cur.fetchone()
             
         retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0]}
-        cache[f"{user_id}:{guild_id}"] = retval
+        member_cache[f"{user_id}:{guild_id}"] = retval
 
     return retval
+
+
+
+
+def get_guild(guild_id):
+    retval = guild_cache.get(guild_id)
+    if retval is None:
+
+        cur = conn.cursor()
+        cur.execute("SELECT role_rewards FROM guilds WHERE guild_id=%s", (guild_id,))
+        selected = cur.fetchone()
+        if selected is None:# If Guild Is Not Found... Create It
+            cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
+            conn.commit()
+            
+            
+        retval = {"guild_id": guild_id, "role_rewards": selected[0]}
+        guild_cache[guild_id] = retval
+
+    return retval
+
+
+
+
 
 class Slash(commands.Cog):
     def __init__(self, bot):
@@ -133,8 +171,10 @@ class Slash(commands.Cog):
         
     def __del__(self):
         print("Clearing Cache...")
-        for i in range(cache.currsize):
-            cache.popitem()
+        for i in range(member_cache.currsize):
+            member_cache.popitem()
+        for i in range(guild_cache.currsize):
+            guild_cache.popitem()
         print("Cache Has Been Emptied!")
 
 
@@ -329,7 +369,7 @@ class Slash(commands.Cog):
             return
         cooldown[message.author.id] = True
         increase = random.randint(15, 20)
-        cache[f"{message.author.id}:{message.guild.id}"]["exp"] += increase
+        member_cache[f"{message.author.id}:{message.guild.id}"]["exp"] += increase
         if increase >= remaining:
             await message.channel.send(f"**{message.author.name}** Has Leveled Up To Level **{member['level'] + 1}**!")
 
@@ -345,25 +385,29 @@ class Slash(commands.Cog):
     @commands.command(name="cacheclear")
     async def _cacheclear(self, ctx):
         await ctx.send("Clearing Cache...")
-        for i in range(cache.currsize):
-            print(i)
-            cache.popitem()
-        await ctx.send("Cache Has Been Emptied")
+        for i in range(member_cache.currsize):
+            member_cache.popitem()
+            
+        for i in range(guild_cache.currsize):
+            guild_cache.popitem()
+            
+        await ctx.send("Guild and Member Cache Has Been Emptied")
 
 
     @commands.is_owner()
     @commands.command(name="cache")
     async def _cache(self, ctx):
         await ctx.send("Printing Cache...")
-        print(cache)
-
-
+        print(member_cache)
+        print("--- Above Is Member Below Is Guild ---")
+        print(guild_cache)
+        
     @commands.is_owner()
     @commands.command(name="cachepop")
     async def _cachepop(self, ctx):
-        print(cache)
+        print(member_cache)
         await ctx.send("Popping Cache...")
-        cache.popitem()
+        member_cache.popitem()
 
 
 
