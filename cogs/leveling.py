@@ -5,7 +5,7 @@ import threading
 
 import discord
 import psycopg
-from cachetools import LRUCache, TTLCache
+from cachetools import LRUCache, TTLCache, cached
 from discord import File
 from discord.ext import commands
 from discord_slash import SlashContext, cog_ext
@@ -73,8 +73,19 @@ class SabreCache(LRUCache):
     return key, value
 
 
+
 cache = SabreCache(maxsize=100)
 
+@cached(cache=TTLCache(maxsize=1024, ttl=3600))
+def get_member_rank(key):
+    cur = conn.cursor()
+    key = key.split(":")
+    cur.execute("SELECT user_id FROM members WHERE guild_id=%s ORDER BY exp ASC", (key[1],))
+    res = cur.fetchall()
+    for i, row in enumerate(res):
+        if row[0] == int(key[0]):
+            return i + 1
+    return 999
 
 # This Function Gets The User Data From The Cache. IF It Is Not In The Cache It Fetches It and If It Cannot Be Found It Creates It.
 def get_member(user_id, guild_id):
@@ -154,6 +165,7 @@ class Slash(commands.Cog):
         total_exp_next_display = x
         total_exp_next_actual = y
         remaining = total_exp_next_actual - total_exp
+        print(get_member_rank(f"{author.id}:{author.guild.id}"), "thats ur rank that noice")
 
 
         lvl_obj = {"level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
