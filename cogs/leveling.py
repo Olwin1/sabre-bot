@@ -91,7 +91,7 @@ def get_member_rank(key):
 def get_member(user_id, guild_id):
     retval = cache.get(f"{user_id}:{guild_id}")
     if retval is None:
-        print(12)
+
         cur = conn.cursor()
         cur.execute("SELECT exp FROM members WHERE user_id=%s and guild_id=%s", (user_id,guild_id))
         selected = cur.fetchone()
@@ -150,7 +150,6 @@ class Slash(commands.Cog):
 
 
         total_exp = member["exp"]
-        print(total_exp)
         exp = total_exp
         x = exp
         y = 0
@@ -159,7 +158,6 @@ class Slash(commands.Cog):
             x = 5*(level**2)+50*level+100
             y += x
             exp -= x
-            print(x, level)
             level += 1
         #Below Is What Happens After
         total_exp_next_display = x
