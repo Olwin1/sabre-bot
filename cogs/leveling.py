@@ -165,7 +165,6 @@ class Slash(commands.Cog):
         total_exp_next_display = x
         total_exp_next_actual = y
         remaining = total_exp_next_actual - total_exp
-        print(get_member_rank(f"{author.id}:{author.guild.id}"), "thats ur rank that noice")
 
 
         lvl_obj = {"level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
@@ -252,13 +251,21 @@ class Slash(commands.Cog):
 
 
         # Draw User's Level
-        x = 1105 + AVATAR_SIZE
+        x = 1205 + AVATAR_SIZE
         y = 150
         draw.text((x, y), "Level", fill=(149,149,149, 255), font=font_60)
 
 
         text_width_level, text_height_level = draw.textsize("Level", font=font_75)
         draw.text((x + text_width_level, y - 30), str(lvl_obj["level"]), fill=(255,255,255, 255), font=font_90)
+    
+        # Draw User's Rank
+        x = 1055 + AVATAR_SIZE
+        draw.text((x, y), "#", fill=(149,149,149, 255), font=font_60)
+
+        y += 15
+        text_width_level, text_height_level = draw.textsize("#", font=font_60)
+        draw.text((x + text_width_level, y - 30), str(get_member_rank(f"{author.id}:{author.guild.id}")), fill=(250,250,250, 250), font=font_75)
         
         
         # --- avatar ---
