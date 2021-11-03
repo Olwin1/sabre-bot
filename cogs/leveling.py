@@ -11,7 +11,7 @@ from discord.ext import commands
 from discord_slash import SlashContext, cog_ext
 from PIL import Image, ImageDraw, ImageFont
 
-
+'''
 def worker():
     """thread worker function"""
     print('Worker')
@@ -53,7 +53,7 @@ threads = []
 t = threading.Thread(target=worker)
 threads.append(t)
 t.start()
-
+'''
 conn = psycopg.connect(dbname="sabre", user="postgres", password="***REMOVED***", host="localhost")
 
 guild_ids = [704255331680911402]
@@ -67,7 +67,8 @@ class SabreCache(LRUCache):
         return None, None
     key, value = super().popitem()
     print('Key "%s" evicted with value "%s"' % (key, value))
-    cur.execute("UPDATE users SET guilds = %s, exp = %s WHERE user_id=%s", (value[0], value[1], key))
+    key = key.split(":")
+    cur.execute("UPDATE members SET exp = %s WHERE user_id=%s AND guild_id=%s", (value["exp"], key[0], key[1]))# VALUE 0 IS THE GUILDS IF A NEW ONE REMEMBER TO ADD IT
     conn.commit()
     return key, value
 
@@ -76,20 +77,44 @@ cache = SabreCache(maxsize=100)
 
 
 # This Function Gets The User Data From The Cache. IF It Is Not In The Cache It Fetches It and If It Cannot Be Found It Creates It.
-def getcache_leveling(key, guild_id):
-    selected = cache.get(key)
-    if selected is None:
-      cur = conn.cursor()
-      cur.execute("SELECT guilds,exp FROM users WHERE user_id=%s", (key,))
-      selected = cur.fetchone()
-      cache[key] = selected
-      if selected is None:
-          cur.execute("INSERT INTO users (user_id, guilds, exp) VALUES (%s, %s, %s)", (key, [guild_id,], [1,]))
-          conn.commit()
-          cur.execute("SELECT guilds,exp FROM users WHERE user_id=%s", (key,))
-          selected = cur.fetchone()
-          cache[key] = selected
-    return selected
+def get_member(user_id, guild_id):
+    retval = cache.get(f"{user_id}:{guild_id}")
+    if retval is None:
+        print(12)
+        cur = conn.cursor()
+        cur.execute("SELECT exp FROM members WHERE user_id=%s and guild_id=%s", (user_id,guild_id))
+        selected = cur.fetchone()
+        if selected is None:# If Member Is Not Found
+            cur.execute("SELECT EXISTS(SELECT * FROM users WHERE id=%s)", (user_id,))# If User Is Not Found Create Them.
+            res = cur.fetchone()
+            if not res[0]:
+                cur.execute("INSERT INTO users (id) VALUES (%s)", (user_id,))
+                
+                
+            cur.execute("SELECT EXISTS(SELECT * FROM guilds WHERE id=%s)", (guild_id,))#If Guild Is Not Found Create It.
+            res = cur.fetchone()
+            if not res[0]:
+                cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
+
+
+            cur.execute("INSERT INTO members (user_id, guild_id, exp) VALUES (%s, %s, %s)", (user_id, guild_id, 1))# Create Member.
+            conn.commit()
+            
+            
+            cur.execute("SELECT exp FROM members WHERE user_id=%s and guild_id=%s", (user_id, guild_id))
+            selected = cur.fetchone()
+            retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0]}
+            cache[f"{user_id}:{guild_id}"] = retval
+        if selected[0] is None:# If EXP Is Not Exist
+            cur.execute("UPDATE members SET exp = %s WHERE user_id=%s AND guild_id=%s", (1,user_id,guild_id))
+            conn.commit()
+            cur.execute("SELECT exp FROM members WHERE user_id=%s and guild_id=%s", (user_id,guild_id))
+            selected = cur.fetchone()
+            
+        retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0]}
+        cache[f"{user_id}:{guild_id}"] = retval
+
+    return retval
 
 class Slash(commands.Cog):
     def __init__(self, bot):
@@ -110,40 +135,33 @@ class Slash(commands.Cog):
             author = ctx.author
         else:
             author = member
-        user = getcache_leveling(author.id, ctx.guild.id)
-        user = {"guilds": user[0], "exp": user[1]}
-        passed = False
-        for i in range(len(user["guilds"])):
-            if user["guilds"][i] == ctx.guild.id:
-                passed = True
-                total_exp = user["exp"][i]
-                exp = total_exp
-                x = exp
-                y = 0
-                level = 0
-                while exp > 0:
-                    x = 5*(level**2)+50*level+100
-                    y += x
-                    exp -= x
-                    print(x, level)
-                    level += 1
-                #Below Is What Happens After
-                total_exp_next_display = x
-                total_exp_next_actual = y
-                remaining = total_exp_next_actual - total_exp
+        member = get_member(author.id, ctx.guild.id)
 
 
-                member = {"guild": user["guilds"][i], "level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
+        total_exp = member["exp"]
+        print(total_exp)
+        exp = total_exp
+        x = exp
+        y = 0
+        level = 0
+        while exp > 0:
+            x = 5*(level**2)+50*level+100
+            y += x
+            exp -= x
+            print(x, level)
+            level += 1
+        #Below Is What Happens After
+        total_exp_next_display = x
+        total_exp_next_actual = y
+        remaining = total_exp_next_actual - total_exp
+
+
+        lvl_obj = {"level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
                 #guild, level, total_exp, total_exp_next_actual, total_exp_next_display, remaining
-        if not passed:
-            print(cache[author.id][0])
-            cache[author.id][0].append(ctx.guild.id)
-            cache[author.id][1].append(1)
-            print(cache[author.id][0])
-            member = {"guild": ctx.guild.id, "level": 1, "total_exp": 1, "total_exp_next_actual": 100, "total_exp_next_display": 100, "remaining": 99, "exp": 1}
-        #await ctx.send(f'Level is: **{member["level"]}** Exp To Next Level Is: **{member["total_exp_next_display"]}** Remaining Exp is: **{member["remaining"]}** Your Exp Is **{member["exp"]}**')
+                
+# Below Is Where The Rank Card Image Generation Starts
 
-        percent = member["exp"] / member["total_exp_next_display"]
+        percent = lvl_obj["exp"] / lvl_obj["total_exp_next_display"]
         percent = percent * 100
         percent = round(percent)
         percent = int(percent)
@@ -211,14 +229,14 @@ class Slash(commands.Cog):
 
         # Draw User's Exp
 
-        text_width_exp, text_height = draw.textsize(str(member["exp"]), font=font_60)
+        text_width_exp, text_height = draw.textsize(str(lvl_obj["exp"]), font=font_60)
         x = 1300
         y = 325
         
 
-        draw.text((x, y), str(member["exp"]), fill=(255,255,255, 255), font=font_60)
+        draw.text((x, y), str(lvl_obj["exp"]), fill=(255,255,255, 255), font=font_60)
         
-        draw.text((x + text_width_exp, y), " / " + str(member["total_exp_next_display"]), fill=(149,149,149, 255), font=font_60)
+        draw.text((x + text_width_exp, y), " / " + str(lvl_obj["total_exp_next_display"]), fill=(149,149,149, 255), font=font_60)
 
 
         # Draw User's Level
@@ -228,7 +246,7 @@ class Slash(commands.Cog):
 
 
         text_width_level, text_height_level = draw.textsize("Level", font=font_75)
-        draw.text((x + text_width_level, y - 30), str(member["level"]), fill=(255,255,255, 255), font=font_90)
+        draw.text((x + text_width_level, y - 30), str(lvl_obj["level"]), fill=(255,255,255, 255), font=font_90)
         
         
         # --- avatar ---
@@ -267,46 +285,34 @@ class Slash(commands.Cog):
         if message.author == self.bot.user:
             return
 
-        user = getcache_leveling(message.author.id, message.guild.id)
-        user = {"guilds": user[0], "exp": user[1]}
-        passed = False
-        for i in range(len(user["guilds"])):
-            if user["guilds"][i] == message.guild.id:
-                passed = True
-                iteration = i
-                total_exp = user["exp"][i]
-                exp = total_exp
-                x = exp
-                y = 0
-                level = 0
-                while exp > 0:
-                    x = 5*(level**2)+50*level+100
-                    y += x
-                    exp -= x
-                    level += 1
-                #Below Is What Happens After
-                total_exp_next_display = x
-                total_exp_next_actual = y
-                remaining = total_exp_next_actual - total_exp
+        member = get_member(message.author.id, message.guild.id)
 
 
-                member = {"guild": user["guilds"][i], "level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
+        total_exp = member["exp"]
+        exp = total_exp
+        x = exp
+        y = 0
+        level = 0
+        while exp > 0:
+            x = 5*(level**2)+50*level+100
+            y += x
+            exp -= x
+            level += 1
+        #Below Is What Happens After
+        total_exp_next_display = x
+        total_exp_next_actual = y
+        remaining = total_exp_next_actual - total_exp
+
+
+        member = {"guild": member["guild_id"], "level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
                 #guild, level, total_exp, total_exp_next_actual, total_exp_next_display, remaining
-        if not passed:
 
-            cache[message.author.id][0].append(message.guild.id)
-            cache[message.author.id][1].append(1)
-            for i in range(len(cache[message.author.id][0])):
-                if cache[message.author.id[0][i]] == message.guild.id:
-                    iteration = i
-
-            member = {"guild": message.guild.id, "level": 1, "total_exp": 1, "total_exp_next_actual": 100, "total_exp_next_display": 100, "remaining": 99, "exp": 1}
         x = cooldown.get(message.author.id)
         if x is not None:
             return
         cooldown[message.author.id] = True
         increase = random.randint(15, 20)
-        cache[message.author.id][1][iteration] += increase
+        cache[f"{message.author.id}:{message.guild.id}"]["exp"] += increase
         if increase >= remaining:
             await message.channel.send(f"**{message.author.name}** Has Leveled Up To Level **{member['level'] + 1}**!")
 
