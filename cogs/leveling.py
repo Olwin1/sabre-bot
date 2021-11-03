@@ -164,8 +164,10 @@ def get_guild(guild_id):
 
 
 
-
-class Slash(commands.Cog):
+  #Each Cog In In The Same File In Order To Share The Cache But They Are Still Individual Cogs And Can Be Enabled & Disabled
+  
+  #The First One Is The Leveling Cog As Defined In the Class Below.  Everything Inside That Class Is To Do With Leveling
+class Leveling(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         
@@ -208,7 +210,7 @@ class Slash(commands.Cog):
         lvl_obj = {"level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
                 #guild, level, total_exp, total_exp_next_actual, total_exp_next_display, remaining
                 
-# Below Is Where The Rank Card Image Generation Starts
+ # Below Is Where The Rank Card Image Generation Starts
 
         percent = lvl_obj["exp"] / lvl_obj["total_exp_next_display"]
         percent = percent * 100
@@ -220,7 +222,7 @@ class Slash(commands.Cog):
         #else:
         background_image = Image.open("other/haloween.png")
         background_image = background_image.convert('RGBA') # add channel ALPHA to draw transparent rectangle
-#            image = Image.open('Cockatoo-min.png')
+ #            image = Image.open('Cockatoo-min.png')
         AVATAR_SIZE = 256
 
         # --- duplicate image ----
@@ -233,9 +235,9 @@ class Slash(commands.Cog):
 
         draw = ImageDraw.Draw(image)
 
-# CREATE YOUR FILL COLOUR HERE (CHANGE TO 245 AT END OF EVENT)
+ # CREATE YOUR FILL COLOUR HERE (CHANGE TO 245 AT END OF EVENT)
         color=(202,98,45)
-# Draw circle at left of progress bar to round
+ # Draw circle at left of progress bar to round
         x, y, diam = 330, 406, 49
         draw.ellipse([x,y,x+diam,y+diam], fill=color)
         percent = percent + 1
@@ -379,8 +381,8 @@ class Slash(commands.Cog):
 
 
 
-#Cache Operations Are Below Here
-#Please Note that cache.clear() breaks it so do not EVER use. Iterate Through Cache.pop when shutting down.
+ #Cache Operations Are Below Here
+ #Please Note that cache.clear() breaks it so do not EVER use. Iterate Through Cache.pop when shutting down.
     @commands.is_owner()
     @commands.command(name="cacheclear")
     async def _cacheclear(self, ctx):
@@ -414,5 +416,21 @@ class Slash(commands.Cog):
         
 
 
-def setup(bot):
-    bot.add_cog(Slash(bot))
+class Moderation(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+
+    @commands.command()
+    async def tst(self, ctx):
+        await ctx.send("yey it works")
+
+
+
+
+
+def setup(bot):# Here Is Where The Cogs Are Added. All Cog Classes MUST Be Linked Here In Order to Be Added.
+    bot.add_cog(Leveling(bot))
+    bot.add_cog(Moderation(bot))
+
+
