@@ -184,7 +184,10 @@ def get_guild(guild_id):
 class Leveling(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.blocked_words = ["evil", "aes"]
+        
+        with open('./other/blocked_words.txt') as f:
+            self.blocked_words = f.read().splitlines()
+            f.close()
         
         
     def __del__(self):
@@ -368,8 +371,9 @@ class Leveling(commands.Cog):
             detected = False
             var = {"links": True, "spam": True, "invites": True, "mass_mention": True, "swears": True}
             
-            if var["swears"]:
-                msg = message.content
+            if var["swears"]:# Auto Mod For Swearing
+                msg = message.content.lower()
+                msg = msg.replace("cockatoo", "").replace("cockateil", "").replace("cockatiel", "").replace("1", "i").replace("ą", "a").replace("ę", "e").replace("ś", "s").replace("ć", "c").replace("⠀", "")
                 for word in self.blocked_words:
                     if word in msg:
                         detected = True
