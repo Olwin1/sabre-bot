@@ -149,7 +149,7 @@ def get_guild(guild_id):
     if retval is None:
 
         cur = conn.cursor()
-        cur.execute("SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog FROM guilds WHERE guild_id=%s", (guild_id,))
+        cur.execute("SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog FROM guilds WHERE id=%s", (guild_id,))
         selected = cur.fetchone()
         if selected is None:# If Guild Is Not Found... Create It
             cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
@@ -184,6 +184,8 @@ def get_guild(guild_id):
 class Leveling(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.blocked_words = ["evil", "aes"]
+        
         
     def __del__(self):
         print("Clearing Cache...")
@@ -359,7 +361,23 @@ class Leveling(commands.Cog):
             return
 
         member = get_member(message.author.id, message.guild.id)
-
+        
+        guild = get_guild(message.guild.id)
+        
+        if guild["toggle"]["automod"]:
+            detected = False
+            var = {"links": True, "spam": True, "invites": True, "mass_mention": True, "swears": True}
+            
+            if var["swears"]:
+                msg = message.content
+                for word in self.blocked_words:
+                    if word in msg:
+                        detected = True
+                        break
+                if detected:
+                    print(f"Message Deleted: '{message.content}'")
+                    await message.delete()
+        
 
         total_exp = member["exp"]
         exp = total_exp
