@@ -389,6 +389,17 @@ class Leveling(commands.Cog):
                     else:
                         print(f"Link Has Been Deleted: '{message.content}'")
                         await message.delete()
+                        
+                        
+            if var["invites"]:
+                if "https://discord.gg/" in message.content or "http://discord.gg/" in message.content or "https://discord.com/invite" in message.content or "http://discord.com/invite" in message.content:
+                    print(f"Invite Link Has Been Deleted: '{message.content}'")
+                    await message.delete()
+                    
+            if var["mass_mention"]:
+                if len(message.raw_mentions) >= 5:
+                    print(f"Mass Mention Has Been Deleted: '{message.content}'")
+                    await message.delete()
         
 
         total_exp = member["exp"]
