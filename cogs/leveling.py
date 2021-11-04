@@ -149,7 +149,7 @@ def get_guild(guild_id):
     if retval is None:
 
         cur = conn.cursor()
-        cur.execute("SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog FROM guilds WHERE id=%s", (guild_id,))
+        cur.execute("SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, automod_links, automod_invites, automod_mention, automod_swears FROM guilds WHERE id=%s", (guild_id,))
         selected = cur.fetchone()
         if selected is None:# If Guild Is Not Found... Create It
             cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
@@ -169,6 +169,12 @@ def get_guild(guild_id):
                 "reactionroles": selected[7], 
                 "music": selected[8], 
                 "modlog": selected[9]
+                },
+            "automod": {
+                "links": selected[10],
+                "invites": selected[11],
+                "mention": selected[12],
+                "swears": selected[13]
                 }
             }
         guild_cache[guild_id] = retval
@@ -360,18 +366,19 @@ class Leveling(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author == self.bot.user:
+        if message.author == self.bot.user:# To Make Sure Not Responding To Bot's Own Message
             return
 
         member = get_member(message.author.id, message.guild.id)
         
         guild = get_guild(message.guild.id)
         
+        #START OF AUTOMOD
         if guild["toggle"]["automod"]:
             detected = False
-            var = {"links": True, "spam": True, "invites": True, "mass_mention": True, "swears": True}
+            var = {"links": True, "invites": True, "mass_mention": True, "swears": True}
             
-            if var["swears"]:# Auto Mod For Swearing
+            if guild["automod"]["swears"]:# Auto Mod For Swearing
                 msg = message.content.lower()
                 msg = msg.replace("cockatoo", "").replace("cockateil", "").replace("cockatiel", "").replace("1", "i").replace("ą", "a").replace("ę", "e").replace("ś", "s").replace("ć", "c").replace("⠀", "")
                 for word in self.blocked_words:
@@ -382,7 +389,7 @@ class Leveling(commands.Cog):
                     print(f"Message Deleted: '{message.content}'")
                     await message.delete()
                     
-            if var["links"]:
+            if guild["automod"]["links"]:# Auto Mod For URLS (Except Invite Links)
                 if "http://" in message.content or "https://" in message.content:
                     if "https://discord.gg/" in message.content or "http://discord.gg/" in message.content or "https://discord.com/invite" in message.content or "http://discord.com/invite" in message.content:
                         pass
@@ -391,16 +398,16 @@ class Leveling(commands.Cog):
                         await message.delete()
                         
                         
-            if var["invites"]:
+            if guild["automod"]["invites"]:#Auto Mod For Invite Links
                 if "https://discord.gg/" in message.content or "http://discord.gg/" in message.content or "https://discord.com/invite" in message.content or "http://discord.com/invite" in message.content:
                     print(f"Invite Link Has Been Deleted: '{message.content}'")
                     await message.delete()
                     
-            if var["mass_mention"]:
-                if len(message.raw_mentions) >= 5:
+            if guild["automod"]["mention"]:# Auto Mod For Mass Mentions
+                if len(message.raw_mentions) >= 5:# 5 Mentions+ = Mass Mention
                     print(f"Mass Mention Has Been Deleted: '{message.content}'")
                     await message.delete()
-        
+            #END OF AUTOMOD
 
         total_exp = member["exp"]
         exp = total_exp
