@@ -149,14 +149,28 @@ def get_guild(guild_id):
     if retval is None:
 
         cur = conn.cursor()
-        cur.execute("SELECT role_rewards FROM guilds WHERE guild_id=%s", (guild_id,))
+        cur.execute("SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog FROM guilds WHERE guild_id=%s", (guild_id,))
         selected = cur.fetchone()
         if selected is None:# If Guild Is Not Found... Create It
             cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
             conn.commit()
             
             
-        retval = {"guild_id": guild_id, "role_rewards": selected[0]}
+        retval = {
+            "guild_id": guild_id, 
+            "role_rewards": selected[0],
+            "toggle": {
+                "moderation": selected[1], 
+                "automod": selected[2], 
+                "welcomer": selected[3], 
+                "autoresponder": selected[4], 
+                "leveling": selected[5], 
+                "autorole": selected[6], 
+                "reactionroles": selected[7], 
+                "music": selected[8], 
+                "modlog": selected[9]
+                }
+            }
         guild_cache[guild_id] = retval
 
     return retval
