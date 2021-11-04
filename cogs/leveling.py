@@ -381,6 +381,14 @@ class Leveling(commands.Cog):
                 if detected:
                     print(f"Message Deleted: '{message.content}'")
                     await message.delete()
+                    
+            if var["links"]:
+                if "http://" in message.content or "https://" in message.content:
+                    if "https://discord.gg/" in message.content or "http://discord.gg/" in message.content or "https://discord.com/invite" in message.content or "http://discord.com/invite" in message.content:
+                        pass
+                    else:
+                        print(f"Link Has Been Deleted: '{message.content}'")
+                        await message.delete()
         
 
         total_exp = member["exp"]
