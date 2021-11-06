@@ -1,3 +1,5 @@
+import asyncio
+from asyncio import tasks
 import io
 import random
 import socket
@@ -7,7 +9,7 @@ import discord
 import psycopg
 from cachetools import LRUCache, TTLCache, cached
 from discord import File
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord_slash import SlashContext, cog_ext
 from PIL import Image, ImageDraw, ImageFont
 
@@ -481,11 +483,87 @@ class Leveling(commands.Cog):
 class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        
 
+        self.countdown.start()
+           
+        self.ban_list = []
+        self.day_list = []
+        self.server_list = []
+        
 
-    @commands.command()
-    async def tst(self, ctx):
-        await ctx.send("yey it works")
+    #This is a background process
+    @tasks.loop()
+    async def countdown(self):
+
+        await self.bot.wait_until_ready()# Do not Start Unless Bot Is Fully Online
+
+        while not self.bot.is_closed():# While Active
+
+            await asyncio.sleep(1)# Wait A Sec
+            self.day_list[:] = [x - 1 for x in self.day_list]# Remove 1 From The Duration (not best method but works for now)
+
+            for day in self.day_list:
+                if day <= 0:
+                    try:
+                        await self.ban_list[self.day_list.index(day)].unban()
+                    except:
+                        print('Error! User already unbanned!')
+                    del self.ban_list[self.day_list.index(day)]# Remove user From Timer
+                    del self.server_list[self.day_list.index(day)]
+                    del self.day_list[self.day_list.index(day)]
+                
+    #Command starts here
+    @cog_ext.cog_slash(guild_ids=guild_ids)
+    async def ban(self, ctx: SlashContext,member:discord.Member, days = None, hours = None, mins = None, reason = "The Ban Hammer Has Spoken!"):
+        if str(ctx.author.id) == '416617058248425473':
+            if days or hours or mins:# If Time Is Provided
+                try:
+                    delay = 0
+                    if hours:# Converts Mins, Days and Hours Into A Seconds Total
+                        try:
+                            hours = int(hours)# Makes Sure It is a int.
+                        except ValueError:
+                            await ctx.send("'Hours' Must Be a Whole Number")
+                            return
+                        delay += hours * 60 * 60
+                    if mins:
+                        try:
+                            mins = int(mins)
+                        except ValueError:
+                            await ctx.send("'Mins' Must Be a Whole Number")
+                            return
+                        delay += mins * 60
+                    if days:
+                        try:
+                            days = int(days)
+                        except ValueError:
+                            await ctx.send("'Days' Must Be a Whole Number")
+                            return
+                        delay += days * 24 * 60 * 60
+
+                    await ctx.guild.ban(member, delete_message_days=0, reason=reason)# Actually Bans The User
+                    comma = ""
+                    if not days:# Removes The Comma After Days If There Are No Days
+                        comma = ""
+                    await ctx.send(f'**{member.mention}** Has Been Banned for {f"**{days} day(s)** " if days else ""}{f"{comma} **{hours} hour(s) **" if hours else ""}{f"and **{mins} min(s)**" if mins else ""}.  For **{reason}**.  By **{ctx.author.mention}**')
+                    self.ban_list.append(member)# Add Member To The Unban Timer.
+                    self.day_list.append(int(delay))
+                    self.server_list.append(ctx.guild.id)
+                except:
+                    await ctx.send('Error! Ban Failed')
+            else:
+                try:
+                    await ctx.guild.ban(member, delete_message_days=0, reason=reason)# If No Duration Specified Just Straight Up Ban 'em
+                    await ctx.send(f'**{member.mention}** Has Been Banned For **{reason}**')
+                except:
+                    await ctx.send("Error! Ban Failed")
+                    
+        else:
+            await ctx.send('You do not have permission to ban users!')
+
+    
+
 
 
 
@@ -494,5 +572,6 @@ class Moderation(commands.Cog):
 def setup(bot):# Here Is Where The Cogs Are Added. All Cog Classes MUST Be Linked Here In Order to Be Added.
     bot.add_cog(Leveling(bot))
     bot.add_cog(Moderation(bot))
+    
 
 
