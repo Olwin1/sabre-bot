@@ -1,5 +1,6 @@
 import asyncio
 import io
+
 import random
 import socket
 import threading
@@ -569,7 +570,7 @@ class Moderation(commands.Cog):
             
             
             
-    @cog_ext.cog_slash()
+    @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(kick_members = True)
     async def kick(self, ctx, member : discord.Member, reason = None):
         if ctx.author.top_role.position > member.top_role.position:
@@ -590,6 +591,30 @@ class Moderation(commands.Cog):
             
         else:
             await ctx.send("ERROR! This User Has A More Senior Role Than You!")
+            
+    @cog_ext.cog_slash(guild_ids=guild_ids)
+    @commands.has_permissions(manage_messages = True)
+    async def clear(self, ctx, amount):
+        try:
+            amount = int(amount)
+        except ValueError:
+            await ctx.send("Amount must Be A Number", hidden=True)
+            
+        limited = False
+        if amount > 100:
+            amount = 100
+            limited = True
+            
+        after = datetime.now() - timedelta(days = 14) 
+        x = await ctx.channel.purge(limit=amount, bulk=True, after=after)
+        if x == []:
+            await ctx.send("Due To Discord Limitations Bulk Delete Only Works For Messages Less Than Two Weeks Old.", hidden=True)
+            return
+        if limited:
+            await ctx.send("Successfully Deleted 100 Messages. (Max Of 100 At A Time)", hidden=True)
+        else:
+            await ctx.send(f"Successfully Deleted {amount} Messages.", hidden=True)
+        
 
 
     
