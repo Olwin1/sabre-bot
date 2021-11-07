@@ -691,17 +691,50 @@ class Moderation(commands.Cog):
             
     @cog_ext.cog_slash(guild_ids=guild_ids)
     async def warn(self, ctx, member : discord.Member, reason):
+        if len(reason) > 150:
+            await ctx.send(f"Your Warn Reason Cannot Be Longer Than 150 Characters. (Currently {len(reason)})", hidden=True)
+            return
         cache = get_member(member.id, ctx.guild.id)
         if not cache["infraction_description"]:
             cache["infraction_description"] = []
             cache["infraction_date"] = []
-            index = 0
-        else:
-            index = len(cache["infraction_date"])# Since Indexes Start At 0 & Length Starts At 1 It Is The Index Of The element To Be Added
+
             
         cache["infraction_description"].append(reason)
         cache["infraction_date"].append(datetime.now().date())
-        await ctx.send(f'{member.mention} Has Been Warned For: **{cache["infraction_description"][index]}**')
+        await ctx.send(f'{member.mention} Has Been Warned For: **{reason}**')
+        
+        
+    @cog_ext.cog_slash(guild_ids=guild_ids)
+    async def infractions(self, ctx, member : discord.Member):
+        cache = get_member(member.id, ctx.guild.id)
+        if not cache["infraction_description"]:
+            embed=discord.Embed(color=0x202225)
+            embed.set_author(name=f"{member.display_name}#{member.discriminator} Has No Infractions", icon_url=member.avatar_url)
+            await ctx.send(embed=embed)
+            return
+        else:
+            index = len(cache["infraction_date"]) - 1# Since Indexes Start At 0 & Length Starts At 1 It Is The Index Of The element To Be Added
+            
+        cache["infraction_description"]
+        cache["infraction_date"].append(datetime.now().date())
+        embed=discord.Embed(color=0x202225)
+        embed.set_author(name=f"{member.display_name}#{member.discriminator} Has {len(cache['infraction_description'])} Infractions", icon_url=member.avatar_url)
+        for i, infraction in enumerate(cache["infraction_description"]):
+            if i >= 10:
+                break
+            embed.add_field(name="⠀", value=f"**{infraction}** • {cache['infraction_date'][i].strftime('%d/%m/%y')}", inline=False)
+        embed.set_footer(text="Showing The Most Recent 10")
+        await ctx.send(embed=embed)
+        
+    @cog_ext.cog_slash(name="clear-infractions", guild_ids=guild_ids)
+    async def _clearinfractions(self, ctx, member : discord.Member):
+        cache = get_member(member.id, ctx.guild.id)
+        cache["infraction_description"] = None
+        cache["infraction_date"] = None
+        await ctx.send(f"Cleared All Infractions Of {member.mention}")
+    
+
 
             
             
