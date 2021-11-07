@@ -490,8 +490,13 @@ class Moderation(commands.Cog):
         self.countdown.start()
            
         self.ban_list = []
-        self.day_list = []
-        self.server_list = []
+        self.ban_time_list = []
+        self.ban_guild_list = []
+        
+        
+        self.mute_list = []
+        self.mute_time_list = []
+        self.mute_guild_list = []
         
 
     #This is a background process
@@ -505,15 +510,27 @@ class Moderation(commands.Cog):
             await asyncio.sleep(1)# Wait A Sec
 
 
-            for day in self.day_list:
+            for day in self.ban_time_list:
                 if day <= datetime.now():
                     try:
-                        await self.ban_list[self.day_list.index(day)].unban()
+                        await self.ban_list[self.ban_time_list.index(day)].unban()
                     except:
                         print('Error! User already unbanned!')
-                    del self.ban_list[self.day_list.index(day)]# Remove user From Timer
-                    del self.server_list[self.day_list.index(day)]
-                    del self.day_list[self.day_list.index(day)]
+                    del self.ban_list[self.ban_time_list.index(day)]# Remove user From Timer
+                    del self.ban_guild_list[self.ban_time_list.index(day)]
+                    del self.ban_time_list[self.ban_time_list.index(day)]
+                    
+            for day in self.mute_time_list:
+                if day <= datetime.now():
+                    try:
+                        for role in self.mute_list[self.mute_time_list.index(day)].guild.roles:
+                            if role.name == "Muted":
+                                await self.mute_list[self.mute_time_list.index(day)].remove_roles(role)
+                    except:
+                        print('Error! User already unmuted!')
+                    del self.mute_list[self.mute_time_list.index(day)]# Remove user From Timer
+                    del self.mute_guild_list[self.mute_time_list.index(day)]
+                    del self.mute_time_list[self.mute_time_list.index(day)]
                 
     #Command starts here
     @cog_ext.cog_slash(guild_ids=guild_ids)
@@ -554,8 +571,8 @@ class Moderation(commands.Cog):
                         comma = ""
                     await ctx.send(f'**{member.mention}** Has Been Banned for {f"**{days} day(s)** " if days else ""}{f"{comma} **{hours} hour(s) **" if hours else ""}{f"and **{mins} min(s)**" if mins else ""}.  For **{reason}**.  By **{ctx.author.mention}**')
                     self.ban_list.append(member)# Add Member To The Unban Timer.
-                    self.day_list.append(timer)
-                    self.server_list.append(ctx.guild.id)
+                    self.ban_time_list.append(timer)
+                    self.ban_guild_list.append(ctx.guild.id)
                 except:
                     await ctx.send('Error! Ban Failed')
             else:
@@ -567,6 +584,84 @@ class Moderation(commands.Cog):
                     
         else:
             await ctx.send('You do not have permission to ban users!')
+            
+            
+    @cog_ext.cog_slash(guild_ids=guild_ids)
+    @commands.has_permissions(kick_members = True)
+    async def mute(self, ctx, member: discord.Member, reason=None, days = None, hours = None, mins = None):
+        role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
+        if not role: # checks if there is muted role
+            muted = await member.guild.create_role(name="Muted", reason="To use for muting")
+            for channel in member.guild.channels: # removes permission to view and send in the channels 
+                await channel.set_permissions(muted, send_messages=False, speak=False)
+        for role in member.guild.roles:
+            if role.name == "Muted":
+                if days or hours or mins:# If Time Is Provided
+                    delay = 0
+                    if hours:# Converts Mins, Days and Hours Into A Seconds Total
+                        try:
+                            hours = int(hours)# Makes Sure It is a int.
+                        except ValueError:
+                            await ctx.send("'Hours' Must Be a Whole Number")
+                            return
+                        delay += hours * 60 * 60
+                    if mins:
+                        try:
+                            mins = int(mins)
+                        except ValueError:
+                            await ctx.send("'Mins' Must Be a Whole Number")
+                            return
+                        delay += mins * 60
+                    if days:
+                        try:
+                            days = int(days)
+                        except ValueError:
+                            await ctx.send("'Days' Must Be a Whole Number")
+                            return
+                        delay += days * 24 * 60 * 60
+                        
+                        
+                    timer = datetime.now()
+                    timer += timedelta(seconds=delay)
+                    msg = f"{f'{days} Days(s), ' if days else ''}{f'{hours} Hours(s), ' if hours else ''}{f'{mins} Mins(s)' if mins else ''}"
+                    await member.add_roles(role)
+                    self.mute_list.append(member)# Add Member To The Unban Timer.
+                    self.mute_time_list.append(timer)
+                    self.mute_guild_list.append(ctx.guild.id)
+                    embed = discord.Embed(title="User Has Been Muted!", colour=0xffb6f2)
+                    embed.add_field(name="User", value=member.mention, inline=True)
+                    embed.add_field(name="Reason:", value=reason, inline=True)
+                    embed.add_field(name="Duration:", value=msg, inline=True)
+                    embed.add_field(name="Muted By", value=ctx.author.mention, inline=True)
+                    await ctx.send(embed=embed)
+                    return
+                    
+                    
+                await member.add_roles(role)
+                embed = discord.Embed(title="User Has Been Muted!", colour=0xffb6f2)
+                embed.add_field(name="User", value=member.mention, inline=True)
+                embed.add_field(name="Reason:", value=reason, inline=True)
+                embed.add_field(name="Muted By", value=ctx.author.mention, inline=True)
+                await ctx.send(embed=embed)
+    
+                return
+            
+            
+    @cog_ext.cog_slash(guild_ids=guild_ids)
+    @commands.has_permissions(kick_members = True)
+    async def unmute(self, ctx, member: discord.Member):
+        role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
+        if not role: # checks if there is muted role
+            muted = await member.guild.create_role(name="Muted", reason="To use for muting")
+            for channel in member.guild.channels: # removes permission to view and send in the channels 
+                await channel.set_permissions(muted, send_messages=False, speak=False)
+        for role in member.guild.roles:
+            if role.name == "Muted":
+                await member.remove_roles(role)
+
+                await ctx.send(f"{member.mention} Has Been Unmuted.")
+    
+                return
             
             
             
@@ -630,6 +725,7 @@ class Moderation(commands.Cog):
         embed.add_field(name="Number Of Boosts", value=ctx.guild.premium_subscription_count, inline=True)
         embed.set_footer(text=f"Guild Name: {ctx.guild.name} || GuildID: {ctx.guild.id}")# Add A Footer Showing Guild Name & ID
         await ctx.send(embed=embed)# Finally Send Message
+        
         
 
 
