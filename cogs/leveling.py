@@ -516,8 +516,9 @@ class Moderation(commands.Cog):
                 
     #Command starts here
     @cog_ext.cog_slash(guild_ids=guild_ids)
+    @commands.has_permissions(ban_members = True)
     async def ban(self, ctx: SlashContext,member:discord.Member, days = None, hours = None, mins = None, reason = "The Ban Hammer Has Spoken!"):
-        if str(ctx.author.id) == '416617058248425473':
+        if ctx.author.top_role.position > member.top_role.position:# If Author Has Higher Role Than Person They Are Trying To Ban.  So Mods Can't Ban Admins or Mods Can't Ban Other Mods
             if days or hours or mins:# If Time Is Provided
                 try:
                     delay = 0
