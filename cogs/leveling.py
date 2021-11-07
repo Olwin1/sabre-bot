@@ -447,8 +447,8 @@ class Leveling(commands.Cog):
 
 
 
- #Cache Operations Are Below Here
- #Please Note that cache.clear() breaks it so do not EVER use. Iterate Through Cache.pop when shutting down.
+  #Cache Operations Are Below Here
+  #Please Note that cache.clear() breaks it so do not EVER use. Iterate Through Cache.pop when shutting down.
     @commands.is_owner()
     @commands.command(name="cacheclear")
     async def _cacheclear(self, ctx):
@@ -535,31 +535,16 @@ class Moderation(commands.Cog):
     #Command starts here
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(ban_members = True)
-    async def ban(self, ctx: SlashContext,member:discord.Member, days = None, hours = None, mins = None, reason = "The Ban Hammer Has Spoken!"):
+    async def ban(self, ctx: SlashContext,member:discord.Member, days : int = None, hours : int = None, mins : int = None, reason = "The Ban Hammer Has Spoken!"):
         if ctx.author.top_role.position > member.top_role.position:# If Author Has Higher Role Than Person They Are Trying To Ban.  So Mods Can't Ban Admins or Mods Can't Ban Other Mods
             if days or hours or mins:# If Time Is Provided
                 try:
                     delay = 0
                     if hours:# Converts Mins, Days and Hours Into A Seconds Total
-                        try:
-                            hours = int(hours)# Makes Sure It is a int.
-                        except ValueError:
-                            await ctx.send("'Hours' Must Be a Whole Number")
-                            return
                         delay += hours * 60 * 60
                     if mins:
-                        try:
-                            mins = int(mins)
-                        except ValueError:
-                            await ctx.send("'Mins' Must Be a Whole Number")
-                            return
                         delay += mins * 60
                     if days:
-                        try:
-                            days = int(days)
-                        except ValueError:
-                            await ctx.send("'Days' Must Be a Whole Number")
-                            return
                         delay += days * 24 * 60 * 60
                         
                         
@@ -588,7 +573,7 @@ class Moderation(commands.Cog):
             
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(kick_members = True)
-    async def mute(self, ctx, member: discord.Member, reason=None, days = None, hours = None, mins = None):
+    async def mute(self, ctx, member: discord.Member, reason=None, days : int = None, hours : int = None, mins : int = None):
         role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
         if not role: # checks if there is muted role
             muted = await member.guild.create_role(name="Muted", reason="To use for muting")
@@ -599,25 +584,10 @@ class Moderation(commands.Cog):
                 if days or hours or mins:# If Time Is Provided
                     delay = 0
                     if hours:# Converts Mins, Days and Hours Into A Seconds Total
-                        try:
-                            hours = int(hours)# Makes Sure It is a int.
-                        except ValueError:
-                            await ctx.send("'Hours' Must Be a Whole Number")
-                            return
                         delay += hours * 60 * 60
                     if mins:
-                        try:
-                            mins = int(mins)
-                        except ValueError:
-                            await ctx.send("'Mins' Must Be a Whole Number")
-                            return
                         delay += mins * 60
                     if days:
-                        try:
-                            days = int(days)
-                        except ValueError:
-                            await ctx.send("'Days' Must Be a Whole Number")
-                            return
                         delay += days * 24 * 60 * 60
                         
                         
