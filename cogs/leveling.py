@@ -72,7 +72,7 @@ class MemberCache(LRUCache):# Handles Deletions Of Member Rows
     key, value = super().popitem()
     print('Key "%s" evicted with value "%s"' % (key, value))
     key = key.split(":")
-    cur.execute("UPDATE members SET exp = %s WHERE user_id=%s AND guild_id=%s", (value["exp"], key[0], key[1]))# VALUE 0 IS THE GUILDS IF A NEW ONE REMEMBER TO ADD IT
+    cur.execute("UPDATE members SET exp = %s, infraction_description = %s, infraction_date = %s WHERE user_id=%s AND guild_id=%s", (value["exp"], value["infraction_description"], value["infraction_date"], key[0], key[1]))# VALUE 0 IS THE GUILDS IF A NEW ONE REMEMBER TO ADD IT
     conn.commit()
     return key, value
 
@@ -111,7 +111,7 @@ def get_member(user_id, guild_id):
     if retval is None:
 
         cur = conn.cursor()
-        cur.execute("SELECT exp FROM members WHERE user_id=%s and guild_id=%s", (user_id,guild_id))
+        cur.execute("SELECT exp, infraction_description, infraction_date FROM members WHERE user_id=%s and guild_id=%s", (user_id,guild_id))
         selected = cur.fetchone()
         if selected is None:# If Member Is Not Found
             cur.execute("SELECT EXISTS(SELECT * FROM users WHERE id=%s)", (user_id,))# If User Is Not Found Create Them.
@@ -130,17 +130,17 @@ def get_member(user_id, guild_id):
             conn.commit()
             
             
-            cur.execute("SELECT exp FROM members WHERE user_id=%s and guild_id=%s", (user_id, guild_id))
+            cur.execute("SELECT exp, infraction_description, infraction_date FROM members WHERE user_id=%s and guild_id=%s", (user_id, guild_id))
             selected = cur.fetchone()
-            retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0]}
+            retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0], "infraction_description": selected[1], "infraction_date": selected[2]}
             member_cache[f"{user_id}:{guild_id}"] = retval
         if selected[0] is None:# If EXP Is Not Exist
             cur.execute("UPDATE members SET exp = %s WHERE user_id=%s AND guild_id=%s", (1,user_id,guild_id))
             conn.commit()
-            cur.execute("SELECT exp FROM members WHERE user_id=%s and guild_id=%s", (user_id,guild_id))
+            cur.execute("SELECT exp, infraction_description, infraction_date FROM members WHERE user_id=%s and guild_id=%s", (user_id,guild_id))
             selected = cur.fetchone()
             
-        retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0]}
+        retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0], "infraction_description": selected[1], "infraction_date": selected[2]}
         member_cache[f"{user_id}:{guild_id}"] = retval
 
     return retval
@@ -687,6 +687,28 @@ class Moderation(commands.Cog):
         else:
             await ctx.send("ERROR! This User Has A More Senior Role Than You!")
             
+            
+            
+    @cog_ext.cog_slash(guild_ids=guild_ids)
+    async def warn(self, ctx, member : discord.Member, reason):
+        cache = get_member(member.id, ctx.guild.id)
+        if not cache["infraction_description"]:
+            cache["infraction_description"] = []
+            cache["infraction_date"] = []
+            index = 0
+        else:
+            index = len(cache["infraction_date"])# Since Indexes Start At 0 & Length Starts At 1 It Is The Index Of The element To Be Added
+            
+        cache["infraction_description"].append(reason)
+        cache["infraction_date"].append(datetime.now().date())
+        await ctx.send(f'{member.mention} Has Been Warned For: **{cache["infraction_description"][index]}**')
+
+            
+            
+            
+            
+            
+            
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(manage_messages = True)# Must be Able To Delete Messages Themselves
     async def clear(self, ctx, amount):
@@ -725,6 +747,7 @@ class Moderation(commands.Cog):
         embed.add_field(name="Number Of Boosts", value=ctx.guild.premium_subscription_count, inline=True)
         embed.set_footer(text=f"Guild Name: {ctx.guild.name} || GuildID: {ctx.guild.id}")# Add A Footer Showing Guild Name & ID
         await ctx.send(embed=embed)# Finally Send Message
+        
         
         
 
