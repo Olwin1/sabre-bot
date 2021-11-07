@@ -1,9 +1,10 @@
 import asyncio
-from asyncio import tasks
 import io
 import random
 import socket
 import threading
+from asyncio import tasks
+from datetime import datetime, timedelta
 
 import discord
 import psycopg
@@ -501,10 +502,10 @@ class Moderation(commands.Cog):
         while not self.bot.is_closed():# While Active
 
             await asyncio.sleep(1)# Wait A Sec
-            self.day_list[:] = [x - 1 for x in self.day_list]# Remove 1 From The Duration (not best method but works for now)
+
 
             for day in self.day_list:
-                if day <= 0:
+                if day <= datetime.now():
                     try:
                         await self.ban_list[self.day_list.index(day)].unban()
                     except:
@@ -541,14 +542,17 @@ class Moderation(commands.Cog):
                             await ctx.send("'Days' Must Be a Whole Number")
                             return
                         delay += days * 24 * 60 * 60
-
+                        
+                        
+                    timer = datetime.now()
+                    timer += timedelta(seconds=delay)
                     await ctx.guild.ban(member, delete_message_days=0, reason=reason)# Actually Bans The User
                     comma = ""
                     if not days:# Removes The Comma After Days If There Are No Days
                         comma = ""
                     await ctx.send(f'**{member.mention}** Has Been Banned for {f"**{days} day(s)** " if days else ""}{f"{comma} **{hours} hour(s) **" if hours else ""}{f"and **{mins} min(s)**" if mins else ""}.  For **{reason}**.  By **{ctx.author.mention}**')
                     self.ban_list.append(member)# Add Member To The Unban Timer.
-                    self.day_list.append(int(delay))
+                    self.day_list.append(timer)
                     self.server_list.append(ctx.guild.id)
                 except:
                     await ctx.send('Error! Ban Failed')
