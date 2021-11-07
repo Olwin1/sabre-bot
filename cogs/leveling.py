@@ -565,6 +565,31 @@ class Moderation(commands.Cog):
                     
         else:
             await ctx.send('You do not have permission to ban users!')
+            
+            
+            
+    @cog_ext.cog_slash()
+    @commands.has_permissions(kick_members = True)
+    async def kick(self, ctx, member : discord.Member, reason = None):
+        if ctx.author.top_role.position > member.top_role.position:
+            
+            await member.kick(reason=reason)
+            embed=discord.Embed(title="User Has Been Kicked!", color=0xffb6f2)
+
+            embed.add_field(name=f"User", value=member.mention, inline=True)
+            embed.add_field(name=f"Kicked By", value=ctx.author.mention, inline=True)
+            embed.add_field(name=f"Reason", value=reason, inline=False)
+            await ctx.send(embed=embed)
+            try:
+                if len(member.mutual_guilds) != 0:
+                    msg = f"You Have Been Kicked From **{ctx.author.guild.name}** For **{reason}** By **{ctx.author.display_name}#{ctx.author.discriminator}**"
+                    await member.send(msg)
+            except:
+                print("DM FAILED")
+            
+        else:
+            await ctx.send("ERROR! This User Has A More Senior Role Than You!")
+
 
     
 
