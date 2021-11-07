@@ -593,20 +593,20 @@ class Moderation(commands.Cog):
             await ctx.send("ERROR! This User Has A More Senior Role Than You!")
             
     @cog_ext.cog_slash(guild_ids=guild_ids)
-    @commands.has_permissions(manage_messages = True)
+    @commands.has_permissions(manage_messages = True)# Must be Able To Delete Messages Themselves
     async def clear(self, ctx, amount):
         try:
-            amount = int(amount)
+            amount = int(amount)# Makes Sure It Is a Number
         except ValueError:
             await ctx.send("Amount must Be A Number", hidden=True)
             
         limited = False
-        if amount > 100:
+        if amount > 100:# Maxes Out At 100
             amount = 100
-            limited = True
+            limited = True# Points That Out If It Has Been Capped
             
         after = datetime.now() - timedelta(days = 14) 
-        x = await ctx.channel.purge(limit=amount, bulk=True, after=after)
+        x = await ctx.channel.purge(limit=amount, bulk=True, after=after)# Actually Delete Messages
         if x == []:
             await ctx.send("Due To Discord Limitations Bulk Delete Only Works For Messages Less Than Two Weeks Old.", hidden=True)
             return
@@ -614,6 +614,22 @@ class Moderation(commands.Cog):
             await ctx.send("Successfully Deleted 100 Messages. (Max Of 100 At A Time)", hidden=True)
         else:
             await ctx.send(f"Successfully Deleted {amount} Messages.", hidden=True)
+            
+            
+    @cog_ext.cog_slash(guild_ids=guild_ids)
+    async def server(self, ctx):
+        embed=discord.Embed(color=0xffb6f2)# Make It Purple
+        embed.set_thumbnail(url=ctx.guild.icon_url)# Sets The Thumbnail To Guild Icon
+        embed.add_field(name="Owner", value=f"<@!{ctx.guild.owner_id}>", inline=True)# Mention Guild Owner
+        embed.add_field(name="Region", value=ctx.guild.region, inline=True)# Show Region (Set In Guild Settings)
+        embed.add_field(name="Server Created On", value=ctx.guild.created_at.strftime("%d/%m/%y"), inline=True)# Convert Datetime Object To DD/MM/YYYY Format
+        embed.add_field(name="Total Roles", value=len(ctx.guild.roles), inline=True)
+        embed.add_field(name="Total Members", value=ctx.guild.member_count, inline=True)
+        embed.add_field(name="Channels", value=f"Total: {len(ctx.guild.channels)}, \nText: {len(ctx.guild.text_channels)}, \nVoice: {len(ctx.author.guild.voice_channels)}", inline=True)
+        embed.add_field(name="Boost Level", value=ctx.guild.premium_tier, inline=True)# Show Nitro Boost Level
+        embed.add_field(name="Number Of Boosts", value=ctx.guild.premium_subscription_count, inline=True)
+        embed.set_footer(text=f"Guild Name: {ctx.guild.name} || GuildID: {ctx.guild.id}")# Add A Footer Showing Guild Name & ID
+        await ctx.send(embed=embed)# Finally Send Message
         
 
 
