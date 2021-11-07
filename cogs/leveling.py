@@ -720,8 +720,8 @@ class Moderation(commands.Cog):
         cache["infraction_date"].append(datetime.now().date())
         embed=discord.Embed(color=0x202225)
         embed.set_author(name=f"{member.display_name}#{member.discriminator} Has {len(cache['infraction_description'])} Infractions", icon_url=member.avatar_url)
-        for i, infraction in enumerate(cache["infraction_description"]):
-            if i >= 10:
+        for i, infraction in enumerate(cache["infraction_description"]):# Iterate Over The Infractions
+            if i >= 10:# To Limit The Infractions Displayed To 10
                 break
             embed.add_field(name="⠀", value=f"**{infraction}** • {cache['infraction_date'][i].strftime('%d/%m/%y')}", inline=False)
         embed.set_footer(text="Showing The Most Recent 10")
@@ -730,9 +730,20 @@ class Moderation(commands.Cog):
     @cog_ext.cog_slash(name="clear-infractions", guild_ids=guild_ids)
     async def _clearinfractions(self, ctx, member : discord.Member):
         cache = get_member(member.id, ctx.guild.id)
-        cache["infraction_description"] = None
+        cache["infraction_description"] = None# Set All Infractions Back To None or NULL
         cache["infraction_date"] = None
         await ctx.send(f"Cleared All Infractions Of {member.mention}")
+        
+        
+    @cog_ext.cog_slash(guild_ids=guild_ids)
+    async def slowmode(self, ctx, channel : discord.TextChannel, seconds : int):
+        if seconds > 21600:
+            await ctx.send("Time Must Be Less That 21600 Seconds", hidden=True)
+        await channel.edit(slowmode_delay=seconds)
+        if seconds == 0:
+            await ctx.send(f"Disabled Slowmode in {channel.mention}")
+            return
+        await ctx.send(f"Set The Slowmode Delay to {seconds} Seconds in {channel.mention}")
     
 
 
