@@ -9,3 +9,6 @@ discord-py-slash-command
 cachetools
 psycopg
 Pillow
+PyNaCl
+
+ADD FFMPEG TO PATH! (PYTHOn SCRIPTS)
