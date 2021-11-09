@@ -223,6 +223,7 @@ class Leveling(commands.Cog):
 
     @cog_ext.cog_slash(name="rank", guild_ids=guild_ids)
     async def _rank(self, ctx: SlashContext, member: discord.Member=None):
+        '''Display Your Rank Card'''
         if member is None:
             author = ctx.author
         else:
@@ -546,6 +547,7 @@ class Moderation(commands.Cog):
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(ban_members = True)
     async def ban(self, ctx: SlashContext,member:discord.Member, days : int = None, hours : int = None, mins : int = None, reason = "The Ban Hammer Has Spoken!"):
+        '''Ban a User'''
         if ctx.author.top_role.position > member.top_role.position:# If Author Has Higher Role Than Person They Are Trying To Ban.  So Mods Can't Ban Admins or Mods Can't Ban Other Mods
             if days or hours or mins:# If Time Is Provided
                 try:
@@ -584,6 +586,7 @@ class Moderation(commands.Cog):
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(kick_members = True)
     async def mute(self, ctx, member: discord.Member, reason=None, days : int = None, hours : int = None, mins : int = None):
+        '''Mute a User'''
         role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
         if not role: # checks if there is muted role
             muted = await member.guild.create_role(name="Muted", reason="To use for muting")
@@ -630,6 +633,7 @@ class Moderation(commands.Cog):
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(kick_members = True)
     async def unmute(self, ctx, member: discord.Member):
+        '''Unmute a User'''
         role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
         if not role: # checks if there is muted role
             muted = await member.guild.create_role(name="Muted", reason="To use for muting")
@@ -648,6 +652,7 @@ class Moderation(commands.Cog):
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(kick_members = True)
     async def kick(self, ctx, member : discord.Member, reason = None):
+        '''Kick a User'''
         if ctx.author.top_role.position > member.top_role.position:
             
             await member.kick(reason=reason)
@@ -671,6 +676,7 @@ class Moderation(commands.Cog):
             
     @cog_ext.cog_slash(guild_ids=guild_ids)
     async def warn(self, ctx, member : discord.Member, reason):
+        '''Warn a User'''
         if len(reason) > 150:
             await ctx.send(f"Your Warn Reason Cannot Be Longer Than 150 Characters. (Currently {len(reason)})", hidden=True)
             return
@@ -687,6 +693,7 @@ class Moderation(commands.Cog):
         
     @cog_ext.cog_slash(guild_ids=guild_ids)
     async def infractions(self, ctx, member : discord.Member):
+        '''Get A List Of Infractions Of a User'''
         cache = get_member(member.id, ctx.guild.id)
         if not cache["infraction_description"]:
             embed=discord.Embed(color=0xffb6f2)
@@ -709,6 +716,7 @@ class Moderation(commands.Cog):
         
     @cog_ext.cog_slash(name="clear-infractions", guild_ids=guild_ids)
     async def _clearinfractions(self, ctx, member : discord.Member):
+        '''Clear All Infractions Of A Specified User'''
         cache = get_member(member.id, ctx.guild.id)
         cache["infraction_description"] = None# Set All Infractions Back To None or NULL
         cache["infraction_date"] = None
@@ -717,6 +725,7 @@ class Moderation(commands.Cog):
         
     @cog_ext.cog_slash(guild_ids=guild_ids)
     async def slowmode(self, ctx, channel : discord.TextChannel, seconds : int):
+        '''Add A Cooldown To Text Channels'''
         if seconds > 21600:
             await ctx.send("Time Must Be Less That 21600 Seconds", hidden=True)
         await channel.edit(slowmode_delay=seconds)
