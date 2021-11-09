@@ -163,7 +163,7 @@ def get_guild(guild_id):
     if retval is None:
 
         cur = conn.cursor()
-        cur.execute("SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, automod_links, automod_invites, automod_mention, automod_swears FROM guilds WHERE id=%s", (guild_id,))
+        cur.execute("SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, automod_links, automod_invites, automod_mention, automod_swears, welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel FROM guilds WHERE id=%s", (guild_id,))
         selected = cur.fetchone()
         if selected is None:# If Guild Is Not Found... Create It
             cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
@@ -189,7 +189,19 @@ def get_guild(guild_id):
                 "invites": selected[11],
                 "mention": selected[12],
                 "swears": selected[13]
+                },
+            "welcome": {
+                "join": {
+                    "channel": selected[14],
+                    "message": selected[15],
+                    "role": selected[16],
+                    "private": selected[17]
+                },
+                "leave": {
+                    "message": selected[18],
+                    "channel": selected[19]
                 }
+            }
             }
         guild_cache[guild_id] = retval
 
@@ -1399,7 +1411,47 @@ class Music(commands.Cog):
                     await ctx.send('Enqueued {}'.format(str(source)))
 
 
+class Welcome(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        
+    
+    @commands.cog.listener()
+    async def on_member_join(self, member):
+        guild_cache = get_guild(member.guild.id)
+        if guild_cache["toggle"]["welcomer"]:
+            if guild_cache["welcome"]["join"]["channel"]:
+                channel = self.bot.get_channel(guild_cache["welcome"]["join"]["channel"])
+                if not channel:
+                    guild_cache["welcome"]["join"]["channel"] = None
+                    guild_cache["welcome"]["join"]["message"] = None
+                    
+                else:
+                    await channel.send(guild_cache["welcome"]["join"]["message"][0].replace("{user.mention}", member.mention).replace("{user.display}", f"{member.display_name}#{member.discriminatior}").replace("{guild.name}", member.guild.name))
+            if guild_cache["welcome"]["join"]["private"]:
+                message = guild_cache["welcome"]["join"]["private"].replace("{user.mention}", member.mention).replace("{user.display}", f"{member.display_name}#{member.discriminatior}")
+                await member.send(message)
+        if guild_cache["toggle"]["autorole"]:
+            if guild_cache["welcome"]["join"]["role"]:
+                role = discord.utils.get(member.guild.roles, id=guild_cache["welcome"]["join"]["role"])
+                if role is None:
+                    guild_cache["welcome"]["join"]["role"] = None
+                await member.add_roles(role)
+                
+    @commands.cog.listener()
+    async def on_member_leave(self, member):
+        guild_cache = get_guild(member.guild.id)
+        if guild_cache["toggle"]["welcomer"]:
+            if guild_cache["welcome"]["leave"]["channel"]:
+                channel = self.bot.get_channel(guild_cache["welcome"]["leave"]["channel"])
+                if not channel:
+                    guild_cache["welcome"]["leave"]["channel"] = None
+                    guild_cache["welcome"]["leave"]["message"] = None
+                    
+                else:
+                    await channel.send(guild_cache["welcome"]["leave"]["message"][0].replace("{user.display}", f"{member.display_name}#{member.discriminatior}").replace("{guild.name}", member.guild.name))
 
+                
 
 
 
@@ -1407,6 +1459,7 @@ def setup(bot):# Here Is Where The Cogs Are Added. All Cog Classes MUST Be Linke
     bot.add_cog(Leveling(bot))
     bot.add_cog(Moderation(bot))
     bot.add_cog(Music(bot))
+    bot.add_cog(Welcome(bot))
     
 
 
