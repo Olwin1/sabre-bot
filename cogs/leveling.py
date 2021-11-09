@@ -728,8 +728,15 @@ class Moderation(commands.Cog):
 
 
             
-            
-            
+    @cog_ext.cog_slash(guild_ids=guild_ids)
+    @commands.has_permissions(manage_channels=True)
+    async def lock(ctx, channel : discord.TextChannel=None):
+        '''Lock A Channel.  Blocks The Default Role From Sending Messages.'''
+        channel = channel or ctx.channel
+        overwrite = channel.overwrites_for(ctx.guild.default_role)
+        overwrite.send_messages = False
+        await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
+        await ctx.send(f'{channel.mention} Locked.')
             
             
             
