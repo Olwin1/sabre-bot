@@ -585,6 +585,7 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members = True)
     async def ban(self, ctx: SlashContext,member:discord.Member, days : int = None, hours : int = None, mins : int = None, reason = "The Ban Hammer Has Spoken!"):
         '''Ban a User'''
+        guild = get_guild(ctx.guild.id)
         if ctx.author.top_role.position > member.top_role.position:# If Author Has Higher Role Than Person They Are Trying To Ban.  So Mods Can't Ban Admins or Mods Can't Ban Other Mods
             if days or hours or mins:# If Time Is Provided
                 try:
@@ -607,12 +608,34 @@ class Moderation(commands.Cog):
                     self.ban_list.append(member)# Add Member To The Unban Timer.
                     self.ban_time_list.append(timer)
                     self.ban_guild_list.append(ctx.guild.id)
+                    if guild["toggle"]["modlog"]:
+                        if guild["modlog"]["channel"] and guild["modlog"]["bans"]:
+                            channel = self.bot.get_channel(guild_cache["modlog"]["channel"])
+                            if not channel:
+                                guild["modlog"]["channel"] = None
+                                return
+                            embed=discord.Embed(title="User Ban Event", description=f"{member.display_name}#{member.discriminator} Has Been Banned", color=0x4d003c)
+                            embed.add_field(name="Banned By:", value=ctx.author.mention, inline=False)
+                            embed.add_field(name="Ban Reason:", value=reason, inline=True)
+                            embed.add_field(name="Ban Duration", value=f'{f"**{days} day(s)** " if days else ""}{f"{comma} **{hours} hour(s) **" if hours else ""}{f"and **{mins} min(s)**" if mins else ""}', inline=True)
+                            await channel.send(embed=embed)
                 except:
                     await ctx.send('Error! Ban Failed')
             else:
                 try:
                     await ctx.guild.ban(member, delete_message_days=0, reason=reason)# If No Duration Specified Just Straight Up Ban 'em
                     await ctx.send(f'**{member.mention}** Has Been Banned For **{reason}**')
+                    if guild["toggle"]["modlog"]:
+                        if guild["modlog"]["channel"] and guild["modlog"]["bans"]:
+                            channel = self.bot.get_channel(guild_cache["modlog"]["channel"])
+                            if not channel:
+                                guild["modlog"]["channel"] = None
+                                return
+                            embed=discord.Embed(title="User Ban Event", description=f"{member.display_name}#{member.discriminator} Has Been Banned", color=0x4d003c)
+                            embed.add_field(name="Banned By:", value=ctx.author.mention, inline=False)
+                            embed.add_field(name="Ban Reason:", value=reason, inline=True)
+                            embed.add_field(name="Ban Duration", value="Permanent", inline=True)
+                            await channel.send(embed=embed)
                 except:
                     await ctx.send("Error! Ban Failed")
                     
