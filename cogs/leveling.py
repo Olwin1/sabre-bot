@@ -689,7 +689,7 @@ class Moderation(commands.Cog):
     async def infractions(self, ctx, member : discord.Member):
         cache = get_member(member.id, ctx.guild.id)
         if not cache["infraction_description"]:
-            embed=discord.Embed(color=0x202225)
+            embed=discord.Embed(color=0xffb6f2)
             embed.set_author(name=f"{member.display_name}#{member.discriminator} Has No Infractions", icon_url=member.avatar_url)
             await ctx.send(embed=embed)
             return
@@ -698,7 +698,7 @@ class Moderation(commands.Cog):
             
         cache["infraction_description"]
         cache["infraction_date"].append(datetime.now().date())
-        embed=discord.Embed(color=0x202225)
+        embed=discord.Embed(color=0xffb6f2)
         embed.set_author(name=f"{member.display_name}#{member.discriminator} Has {len(cache['infraction_description'])} Infractions", icon_url=member.avatar_url)
         for i, infraction in enumerate(cache["infraction_description"]):# Iterate Over The Infractions
             if i >= 10:# To Limit The Infractions Displayed To 10
@@ -1179,13 +1179,15 @@ class Music(commands.Cog):
         ctx.voice_state = self.get_voice_state(ctx)
 
         if not channel and not ctx.author.voice:
-            raise VoiceError('You are neither connected to a voice channel nor specified a channel to join.')
+            raise VoiceError('You have not specified/joined a voice channel')
 
         destination = channel or ctx.author.voice.channel
         if ctx.voice_state.voice:
             await ctx.voice_state.voice.move_to(destination)
-            embed=discord.Embed(title=f"Moved To {destination}", color=0xffb6f2)
+            embed=discord.Embed(color=0xffb6f2)
+            embed.set_author(name=f"Moved To {destination}")
             await ctx.send(embed=embed)
+
             return
 
         ctx.voice_state.voice = await destination.connect()
@@ -1199,50 +1201,61 @@ class Music(commands.Cog):
         try:
             await ctx.voice_state.stop()
             del self.voice_states[ctx.guild.id]
-            embed=discord.Embed(title="Succesfully Disconnected", color=0xffb6f2)
+            embed=discord.Embed(color=0xffb6f2)
+            embed.set_author(name="⏹️ Playback Stopped")
             await ctx.send(embed=embed)
+
         except:
-            await ctx.send('Not connected to any voice channel.')
+            await ctx.send('Not connected to any voice channel.', hidden=True)
 
 
 
     @cog_ext.cog_slash(name='now', guild_ids=guild_ids)
     async def _now(self, ctx):
-        """Displays the currently playing song."""
+        """⏏️ Displays the currently playing song."""
+        
         ctx.voice_state = self.get_voice_state(ctx)
 
         if ctx.voice_state.current is None:
-            await ctx.send("No Song Currently Playing")
+            embed=discord.Embed(color=0xffb6f2)
+            embed.set_author(name="⏏️ Nothing Playing.")
+            await ctx.send(embed=embed)
             return
-
+        await ctx.send("Generating...")
         await ctx.send(file=ctx.voice_state.current.create_embed())
 
     @cog_ext.cog_slash(name='pause', guild_ids=guild_ids)
     async def _pause(self, ctx):
-        """Pauses the currently playing song."""
+        """⏸️ Pauses the currently playing song."""
         ctx.voice_state = self.get_voice_state(ctx)
 
         if ctx.voice_state.is_playing or ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
-            embed=discord.Embed(title="Music Playback Has Been Paused", color=0xffb6f2)
+            embed=discord.Embed(color=0xffb6f2)
+            embed.set_author(name="⏸️ Playback Paused.")
             await ctx.send(embed=embed)
+        else:
+            await ctx.send("Music Is Already Paused.", hidden=True)
 
     @cog_ext.cog_slash(name='resume', guild_ids=guild_ids)
     async def _resume(self, ctx):
-        """Resumes a currently paused song."""
+        """▶️ Resumes a currently paused song."""
         ctx.voice_state = self.get_voice_state(ctx)
 
         if ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
-            embed=discord.Embed(title="Music Has Been Resumed", color=0xffb6f2)
+            embed=discord.Embed(color=0xffb6f2)
+            embed.set_author(name="▶️ Playback Resumed.")
             await ctx.send(embed=embed)
+        else:
+            await ctx.send("Song Is Not Paused.", hidden=True)
+
 
 
 
     @cog_ext.cog_slash(name='skip', guild_ids=guild_ids)
     async def _skip(self, ctx: commands.Context):
-        """Vote to skip a song.
-        """
+        """⏭ Vote to skip a song."""
         ctx.voice_state = self.get_voice_state(ctx)
 
         if not ctx.voice_state.is_playing:
@@ -1257,19 +1270,27 @@ class Music(commands.Cog):
             ctx.voice_state.skip_votes.add(voter.id)
             total_votes = len(ctx.voice_state.skip_votes)
 
+            embed=discord.Embed(color=0xffb6f2)
+
             if total_votes >= 3:
-                await ctx.send("Song Skipped! ⏩︎")
+                embed.set_author(name=f"⏩︎ Song Skipped.")
+                await ctx.send(embed=embed)
+
                 ctx.voice_state.skip()
             else:
+                embed.set_author(name='Skip Vote Registered. (**{}/3**)'.format(total_votes))
+                await ctx.send(embed=embed)
                 await ctx.send('You Have Voted To Skip The Current Song (**{}/3**)'.format(total_votes))
 
         else:
-            await ctx.send('You have already voted to skip this song.')
+            embed=discord.Embed(color=0xffb6f2)
+            embed.set_author(name="You have already voted to skip this song.", icon_url=ctx.author.avatar_url)
+            await ctx.send(embed=embed)
+
 
     @cog_ext.cog_slash(name='queue', guild_ids=guild_ids)
     async def _queue(self, ctx, *, page: int = 1):
-        """Shows the song queue.
-        """
+        """Show the song queue."""
         ctx.voice_state = self.get_voice_state(ctx)
 
         if len(ctx.voice_state.songs) == 0:
@@ -1285,21 +1306,25 @@ class Music(commands.Cog):
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
             queue += '`{0}.` [**{1.source.title}**]({1.source.url})\n'.format(i + 1, song)
 
-        embed = (discord.Embed(description='**{} tracks:**\n\n{}'.format(len(ctx.voice_state.songs), queue))
+        embed = (discord.Embed(description='**{} tracks:**\n\n{}'.format(len(ctx.voice_state.songs), queue, color=0xffb6f2))
                  .set_footer(text='Viewing page {}/{}'.format(page, pages)))
         await ctx.send(embed=embed)
 
     @cog_ext.cog_slash(name='shuffle', guild_ids=guild_ids)
     async def _shuffle(self, ctx):
-        """Shuffles the queue."""
+        """🔀 Shuffle the queue."""
         ctx.voice_state = self.get_voice_state(ctx)
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.send('Empty queue.')
+            embed=discord.Embed(color=0xffb6f2)
+            embed.set_author(name="The Queue Is Empty.")
+            return await ctx.send(embed=embed)
 
         ctx.voice_state.songs.shuffle()
-        embed=discord.Embed(title="Shuffled The Queue", color=0x000000)
+        embed=discord.Embed(color=0xffb6f2)
+        embed.set_author(name=f"🔀 Shuffled The Queue")
         await ctx.send(embed=embed)
+
 
     @cog_ext.cog_slash(name='remove')
     async def _remove(self, ctx, index: int):
@@ -1307,17 +1332,22 @@ class Music(commands.Cog):
         ctx.voice_state = self.get_voice_state(ctx)
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.send('Empty queue.')
+            embed=discord.Embed(color=0xffb6f2)
+            embed.set_author(name="The Queue Is Empty.")
+            return await ctx.send(embed=embed)
+        elif len(ctx.voice_state.songs) < index:
+            await ctx.send("Index Doesn't Exist.", hidden=True)
+            return
 
         ctx.voice_state.songs.remove(index - 1)
-        embed=discord.Embed(title=f"Deleted {index} From Queue", color=0x000000)
+        embed=discord.Embed(color=0xffb6f2)
+        embed.set_author(name=f"❌ Removed {index} From Queue.")
         await ctx.send(embed=embed)
+
 
     @cog_ext.cog_slash(name='loop', guild_ids=guild_ids)
     async def _loop(self, ctx):
-        """Loops the currently playing song.
-        Invoke this command again to unloop the song.
-        """
+        """Loops the currently playing song."""
         ctx.voice_state = self.get_voice_state(ctx)
 
         if not ctx.voice_state.is_playing:
@@ -1325,17 +1355,18 @@ class Music(commands.Cog):
 
         # Inverse boolean value to loop and unloop.
         ctx.voice_state.loop = not ctx.voice_state.loop
-        embed=discord.Embed(title="Loop Mode Toggled", color=0x000000)
+        embed=discord.Embed(color=0xffb6f2)
+        embed.set_author(name=f"🔄 Loop Mode {'Enabled' if ctx.voice_state.loop else 'Disabled'}")
         await ctx.send(embed=embed)
 
     @cog_ext.cog_slash(name='play', guild_ids=guild_ids)
     async def _play(self, ctx, search: str):
-        """Plays a song.
-        If there are songs in the queue
-        """
+        """Plays a song. New Songs Are Added To A Queue"""
         ctx.voice_state = self.get_voice_state(ctx)
         if not ctx.voice_state.voice:
             await ctx.invoke(self._join)
+        else:
+            await ctx.send("Searching...")
 
         
         try:
