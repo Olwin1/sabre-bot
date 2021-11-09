@@ -97,12 +97,13 @@ class GuildCache(LRUCache):# Handles Deletions Of Guild Rows
     cur.execute("""UPDATE guilds SET role_rewards = %s, 
                 toggle_moderation = %s, toggle_automod = %s, toggle_welcomer = %s, toggle_autoresponder = %s, toggle_leveling = %s, toggle_autorole = %s, toggle_reactionroles = %s, toggle_music = %s, toggle_modlog = %s,
                 automod_links = %s, automod_invites = %s, automod_mention = %s, automod_swears = %s,
-                welcome_join_channel = %s, welcome_join_message = %s, welcome_join_role = %s, welcome_join_message_p = %s, welcome_leave_message = %s, welcome_leave_channel = %s
+                welcome_join_channel = %s, welcome_join_message = %s, welcome_join_role = %s, welcome_join_message_p = %s, welcome_leave_message = %s, welcome_leave_channel = %s, 
+                modlog_channel = %s, modlog_bans = %s, modlog_warns = %s, modlog_mutes = %s, modlog_purge = %s, modlog_lock = %s, modlog_kick = %s
                 WHERE guild_id=%s
                 """, (value["role_rewards"], value["toggle"]["moderation"], value["toggle"]["automod"], value["toggle"]["welcomer"], value["toggle"]["autoresponder"], value["toggle"]["leveling"], value["toggle"]["autorole"], value["toggle"]["reactionroles"], value["toggle"]["music"], value["toggle"]["modlog"], 
                       value["automod"]["links"], value["automod"]["invites"], value["automod"]["mentions"], value["automod"]["swears"], 
                       value["welcome"]["join"]["channel"], value["welcome"]["join"]["message"], value["welcome"]["join"]["role"], value["welcome"]["join"]["private"], 
-                      value["welcome"]["leave"]["message"], value["welcome"]["leave"]["channel"], key))#IF A NEW COLUMN REMEMBER TO ADD IT
+                      value["welcome"]["leave"]["message"], value["welcome"]["leave"]["channel"], value["modlog"]["channel"], value["modlog"]["bans"], value["modlog"]["warns"], value["modlog"]["mutes"], value["modlog"]["purge"], value["modlog"]["lock"], value["modlog"]["kick"], key))#IF A NEW COLUMN REMEMBER TO ADD IT
     conn.commit()
     return key, value
 
@@ -177,7 +178,8 @@ def get_guild(guild_id):
         cur = conn.cursor()
         cur.execute("""SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
                     automod_links, automod_invites, automod_mention, automod_swears, 
-                    welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel FROM guilds WHERE id=%s""", (guild_id,))
+                    welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel, 
+                    modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick, FROM guilds WHERE id=%s""", (guild_id,))
         selected = cur.fetchone()
         if selected is None:# If Guild Is Not Found... Create It
             cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
@@ -215,6 +217,15 @@ def get_guild(guild_id):
                     "message": selected[18],
                     "channel": selected[19]
                 }
+                },
+            "modlog": {
+                "channel": selected[20],
+                "bans": selected[21],
+                "warns": selected[22],
+                "mutes": selected[23],
+                "purge": selected[24],
+                "lock": selected[25],
+                "kick": selected[26],
             }
             }
         guild_cache[guild_id] = retval
