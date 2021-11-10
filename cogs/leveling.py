@@ -625,9 +625,9 @@ class Moderation(commands.Cog):
                 try:
                     await ctx.guild.ban(member, delete_message_days=0, reason=reason)# If No Duration Specified Just Straight Up Ban 'em
                     await ctx.send(f'**{member.mention}** Has Been Banned For **{reason}**')
-                    if guild["toggle"]["modlog"]:
+                    if guild["toggle"]["modlog"]:# Modlog For Ban Command
                         if guild["modlog"]["channel"] and guild["modlog"]["bans"]:
-                            channel = self.bot.get_channel(guild_cache["modlog"]["channel"])
+                            channel = self.bot.get_channel(guild["modlog"]["channel"])
                             if not channel:
                                 guild["modlog"]["channel"] = None
                                 return
@@ -648,6 +648,7 @@ class Moderation(commands.Cog):
     async def mute(self, ctx, member: discord.Member, reason=None, days : int = None, hours : int = None, mins : int = None):
         '''Mute a User'''
         role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
+        guild = get_guild(ctx.guild.id)
         if not role: # checks if there is muted role
             muted = await member.guild.create_role(name="Muted", reason="To use for muting")
             for channel in member.guild.channels: # removes permission to view and send in the channels 
@@ -677,6 +678,17 @@ class Moderation(commands.Cog):
                     embed.add_field(name="Duration:", value=msg, inline=True)
                     embed.add_field(name="Muted By", value=ctx.author.mention, inline=True)
                     await ctx.send(embed=embed)
+                    if guild["toggle"]["modlog"]:
+                        if guild["modlog"]["channel"] and guild["modlog"]["mutes"]:
+                            channel = self.bot.get_channel(guild["modlog"]["channel"])
+                            if not channel:
+                                guild["modlog"]["channel"] = None
+                                return
+                            embed=discord.Embed(title="User Mute Event", description=f"{member.display_name}#{member.discriminator} Has Been Muted", color=0x4d003c)
+                            embed.add_field(name="Muted By:", value=ctx.author.mention, inline=False)
+                            embed.add_field(name="Mute Reason:", value=reason, inline=True)
+                            embed.add_field(name="Mute Duration", value=f"{f'{days} Days(s), ' if days else ''}{f'{hours} Hours(s), ' if hours else ''}{f'{mins} Mins(s)' if mins else ''}", inline=True)
+                            await channel.send(embed=embed)
                     return
                     
                     
@@ -686,6 +698,17 @@ class Moderation(commands.Cog):
                 embed.add_field(name="Reason:", value=reason, inline=True)
                 embed.add_field(name="Muted By", value=ctx.author.mention, inline=True)
                 await ctx.send(embed=embed)
+                if guild["toggle"]["modlog"]:# Modlog For Mute Command
+                    if guild["modlog"]["channel"] and guild["modlog"]["mutes"]:
+                        channel = self.bot.get_channel(guild["modlog"]["channel"])
+                        if not channel:
+                            guild["modlog"]["channel"] = None
+                            return
+                        embed=discord.Embed(title="User Mute Event", description=f"{member.display_name}#{member.discriminator} Has Been Muted", color=0x4d003c)
+                        embed.add_field(name="Muted By:", value=ctx.author.mention, inline=False)
+                        embed.add_field(name="Mute Reason:", value=reason, inline=True)
+                        embed.add_field(name="Mute Duration", value="Permanent", inline=True)
+                        await channel.send(embed=embed)
     
                 return
             
@@ -695,6 +718,7 @@ class Moderation(commands.Cog):
     async def unmute(self, ctx, member: discord.Member):
         '''Unmute a User'''
         role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
+        guild = get_guild(ctx.huild.id)
         if not role: # checks if there is muted role
             muted = await member.guild.create_role(name="Muted", reason="To use for muting")
             for channel in member.guild.channels: # removes permission to view and send in the channels 
@@ -704,6 +728,15 @@ class Moderation(commands.Cog):
                 await member.remove_roles(role)
 
                 await ctx.send(f"{member.mention} Has Been Unmuted.")
+                if guild["toggle"]["modlog"]:# Modlog For Unmute Command
+                    if guild["modlog"]["channel"] and guild["modlog"]["mutes"]:
+                        channel = self.bot.get_channel(guild["modlog"]["channel"])
+                        if not channel:
+                            guild["modlog"]["channel"] = None
+                            return
+                        embed=discord.Embed(title="User Unmute Event", description=f"{member.display_name}#{member.discriminator} Has Been Unmuted", color=0x4d003c)
+                        embed.add_field(name="Unmuted By:", value=ctx.author.mention, inline=False)
+                        await channel.send(embed=embed)
     
                 return
             
@@ -714,7 +747,7 @@ class Moderation(commands.Cog):
     async def kick(self, ctx, member : discord.Member, reason = None):
         '''Kick a User'''
         if ctx.author.top_role.position > member.top_role.position:
-            
+            guild = get_guild(ctx.guild.id)
             await member.kick(reason=reason)
             embed=discord.Embed(title="User Has Been Kicked!", color=0xffb6f2)
 
@@ -722,6 +755,16 @@ class Moderation(commands.Cog):
             embed.add_field(name=f"Kicked By", value=ctx.author.mention, inline=True)
             embed.add_field(name=f"Reason", value=reason, inline=False)
             await ctx.send(embed=embed)
+            if guild["toggle"]["modlog"]:# Modlog For Kick Command
+                if guild["modlog"]["channel"] and guild["modlog"]["kick"]:
+                    channel = self.bot.get_channel(guild["modlog"]["channel"])
+                    if not channel:
+                        guild["modlog"]["channel"] = None
+                        return
+                    embed=discord.Embed(title="User Kick Event", description=f"{member.display_name}#{member.discriminator} Has Been Kicked", color=0x4d003c)
+                    embed.add_field(name="Kicked By:", value=ctx.author.mention, inline=False)
+                    embed.add_field(name="Kick Reason:", value=reason, inline=True)
+                    await channel.send(embed=embed)
             try:
                 if len(member.mutual_guilds) != 0:
                     msg = f"You Have Been Kicked From **{ctx.author.guild.name}** For **{reason}** By **{ctx.author.display_name}#{ctx.author.discriminator}**"
@@ -745,10 +788,22 @@ class Moderation(commands.Cog):
             cache["infraction_description"] = []
             cache["infraction_date"] = []
 
+        guild = get_guild(ctx.guild.id)
             
         cache["infraction_description"].append(reason)
         cache["infraction_date"].append(datetime.now().date())
         await ctx.send(f'{member.mention} Has Been Warned For: **{reason}**')
+        
+        if guild["toggle"]["modlog"]:# Modlog For Warn Command
+            if guild["modlog"]["channel"] and guild["modlog"]["warns"]:
+                channel = self.bot.get_channel(guild["modlog"]["channel"])
+                if not channel:
+                    guild["modlog"]["channel"] = None
+                    return
+                embed=discord.Embed(title="User Warn Event", description=f"{member.display_name}#{member.discriminator} Has Been Warned", color=0x4d003c)
+                embed.add_field(name="Warned By:", value=ctx.author.mention, inline=False)
+                embed.add_field(name="Warn Reason:", value=reason, inline=True)
+                await channel.send(embed=embed)
         
         
     @cog_ext.cog_slash(guild_ids=guild_ids)
@@ -778,9 +833,20 @@ class Moderation(commands.Cog):
     async def _clearinfractions(self, ctx, member : discord.Member):
         '''Clear All Infractions Of A Specified User'''
         cache = get_member(member.id, ctx.guild.id)
+        guild = get_guild(ctx.guild.id)
         cache["infraction_description"] = None# Set All Infractions Back To None or NULL
         cache["infraction_date"] = None
         await ctx.send(f"Cleared All Infractions Of {member.mention}")
+        if guild["toggle"]["modlog"]:# Modlog For Clear Warns Command
+            if guild["modlog"]["channel"] and guild["modlog"]["warns"]:
+                channel = self.bot.get_channel(guild["modlog"]["channel"])
+                if not channel:
+                    guild["modlog"]["channel"] = None
+                    return
+                embed=discord.Embed(title="User Warn Clear Event", description=f"{member.display_name}#{member.discriminator} Has Been Cleared", color=0x4d003c)
+                embed.add_field(name="Cleared By:", value=ctx.author.mention, inline=False)
+
+                await channel.send(embed=embed)
         
         
     @cog_ext.cog_slash(guild_ids=guild_ids)
@@ -799,13 +865,23 @@ class Moderation(commands.Cog):
             
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(manage_channels=True)
-    async def lock(ctx, channel : discord.TextChannel=None):
+    async def lock(self, ctx, channel : discord.TextChannel=None):
         '''Lock A Channel.  Blocks The Default Role From Sending Messages.'''
         channel = channel or ctx.channel
+        guild = get_guild(ctx.guild.id)
         overwrite = channel.overwrites_for(ctx.guild.default_role)
         overwrite.send_messages = False
         await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
         await ctx.send(f'{channel.mention} Locked.')
+        if guild["toggle"]["modlog"]:# Modlog For Lock Command
+            if guild["modlog"]["channel"] and guild["modlog"]["lock"]:
+                channel = self.bot.get_channel(guild["modlog"]["channel"])
+                if not channel:
+                    guild["modlog"]["channel"] = None
+                    return
+                embed=discord.Embed(title="Channel Lock Event", description=f"{channel.mention} Has Been Locked", color=0x4d003c)
+                embed.add_field(name="Locked By:", value=ctx.author.mention, inline=False)
+
             
             
             
@@ -831,6 +907,18 @@ class Moderation(commands.Cog):
             await ctx.send("Successfully Deleted 100 Messages. (Max Of 100 At A Time)", hidden=True)
         else:
             await ctx.send(f"Successfully Deleted {amount} Messages.", hidden=True)
+        
+        guild = get_guild(ctx.guild.id)
+        if guild["toggle"]["modlog"]:# Modlog For Clear Command
+            if guild["modlog"]["channel"] and guild["modlog"]["purge"]:
+                channel = self.bot.get_channel(guild["modlog"]["channel"])
+                if not channel:
+                    guild["modlog"]["channel"] = None
+                    return
+                embed=discord.Embed(title="User Purge Event", description=f"{ctx.channel.mention} Has Been Cleared", color=0x4d003c)
+                embed.add_field(name="Cleared By:", value=ctx.author.mention, inline=False)
+                embed.add_field(name="Count:", value=f"{amount} Deleted.", inline=True)
+
             
             
     @cog_ext.cog_slash(guild_ids=guild_ids)
