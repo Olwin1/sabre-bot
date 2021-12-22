@@ -10,5 +10,6 @@ cachetools
 psycopg
 Pillow
 PyNaCl
+redis
 
 ADD FFMPEG TO PATH! (PYTHOn SCRIPTS)

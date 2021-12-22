@@ -35,9 +35,12 @@ async def on_ready():
     """http://discordpy.readthedocs.io/en/rewrite/api.html#discord.on_ready"""
 
     print(f'\n\nLogged in as: {bot.user.name} - {bot.user.id}\nVersion: {discord.__version__}\n')
+    
+    await bot.wait_until_ready()
 
     # Changes our bots Playing Status. type=1(streaming) for a standard game you could remove type and url.
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name='Visual Studio Code'))
+    
     print(f'Successfully logged in and booted...!')
 
 
