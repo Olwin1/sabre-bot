@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 
 import async_timeout
 import discord
+from discord import message
 import psycopg
 import youtube_dl
 from async_timeout import timeout
@@ -21,6 +22,8 @@ from discord.ext import commands, tasks
 from discord_slash import SlashContext, cog_ext
 from PIL import Image, ImageDraw, ImageFont
 from youtube_dl.utils import DownloadError
+import redis
+from modules import cache_get as cache
 
 # Silence useless bug reports messages for Music
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -68,169 +71,35 @@ t = threading.Thread(target=worker)
 threads.append(t)
 t.start()
 '''
-conn = psycopg.connect(dbname="sabre", user="postgres", password="***REMOVED***", host="localhost")
+
+
+
+
+r = redis.Redis(host='161.97.86.11', port=6379, db=0, password="Q29ubmll")
 
 guild_ids = [704255331680911402]
 print("levleing is runnin")
 cooldown = TTLCache(maxsize=1024, ttl=20)
 
-class MemberCache(LRUCache):# Handles Deletions Of Member Rows
-  def popitem(self):
-    cur = conn.cursor()
-    if super().currsize == 0:
-        return None, None
-    key, value = super().popitem()
-    print('Key "%s" evicted with value "%s"' % (key, value))
-    key = key.split(":")
-    cur.execute("UPDATE members SET exp = %s, infraction_description = %s, infraction_date = %s WHERE user_id=%s AND guild_id=%s", (value["exp"], value["infraction_description"], value["infraction_date"], key[0], key[1]))# VALUE 0 IS THE GUILDS IF A NEW ONE REMEMBER TO ADD IT
-    conn.commit()
-    return key, value
 
 
-class GuildCache(LRUCache):# Handles Deletions Of Guild Rows
-  def popitem(self):
-    cur = conn.cursor()
-    if super().currsize == 0:
-        return None, None
-    key, value = super().popitem()
-    print('Key "%s" evicted with value "%s"' % (key, value))
-    cur.execute("""UPDATE guilds SET role_rewards = %s, 
-                toggle_moderation = %s, toggle_automod = %s, toggle_welcomer = %s, toggle_autoresponder = %s, toggle_leveling = %s, toggle_autorole = %s, toggle_reactionroles = %s, toggle_music = %s, toggle_modlog = %s,
-                automod_links = %s, automod_invites = %s, automod_mention = %s, automod_swears = %s,
-                welcome_join_channel = %s, welcome_join_message = %s, welcome_join_role = %s, welcome_join_message_p = %s, welcome_leave_message = %s, welcome_leave_channel = %s, 
-                modlog_channel = %s, modlog_bans = %s, modlog_warns = %s, modlog_mutes = %s, modlog_purge = %s, modlog_lock = %s, modlog_kick = %s
-                WHERE guild_id=%s
-                """, (value["role_rewards"], value["toggle"]["moderation"], value["toggle"]["automod"], value["toggle"]["welcomer"], value["toggle"]["autoresponder"], value["toggle"]["leveling"], value["toggle"]["autorole"], value["toggle"]["reactionroles"], value["toggle"]["music"], value["toggle"]["modlog"], 
-                      value["automod"]["links"], value["automod"]["invites"], value["automod"]["mentions"], value["automod"]["swears"], 
-                      value["welcome"]["join"]["channel"], value["welcome"]["join"]["message"], value["welcome"]["join"]["role"], value["welcome"]["join"]["private"], 
-                      value["welcome"]["leave"]["message"], value["welcome"]["leave"]["channel"], value["modlog"]["channel"], value["modlog"]["bans"], value["modlog"]["warns"], value["modlog"]["mutes"], value["modlog"]["purge"], value["modlog"]["lock"], value["modlog"]["kick"], key))#IF A NEW COLUMN REMEMBER TO ADD IT
-    conn.commit()
-    return key, value
 
 
-#role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, 
-# toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, 
-# toggle_modlog, automod_links, automod_invites, automod_mention, automod_swears, 
-# welcome_join_channel, welcome_join_message, 
-# welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel
 
-member_cache = MemberCache(maxsize=100)# Actual Creation Of The Member and Guild Cache
-guild_cache = GuildCache(maxsize=100)
+
 
 @cached(cache=TTLCache(maxsize=1024, ttl=3600))# Cache To Store Member's Rank Compared To Others.  Instead Of Updating Just Deletes It After 60 Mins And Re-Orders It When Needed.
 def get_member_rank(key):
-    cur = conn.cursor()
+    #cur = conn.cursor()
     key = key.split(":")
-    cur.execute("SELECT user_id FROM members WHERE guild_id=%s ORDER BY exp ASC", (key[1],))
-    res = cur.fetchall()
-    for i, row in enumerate(res):
-        if row[0] == int(key[0]):
-            return i + 1
-    return 999
-
-# This Function Gets The Member Data From The Cache. IF It Is Not In The Cache It Fetches It and If It Cannot Be Found It Creates It.
-def get_member(user_id, guild_id):
-    retval = member_cache.get(f"{user_id}:{guild_id}")
-    if retval is None:
-
-        cur = conn.cursor()
-        cur.execute("SELECT exp, infraction_description, infraction_date FROM members WHERE user_id=%s and guild_id=%s", (user_id,guild_id))
-        selected = cur.fetchone()
-        if selected is None:# If Member Is Not Found
-            cur.execute("SELECT EXISTS(SELECT * FROM users WHERE id=%s)", (user_id,))# If User Is Not Found Create Them.
-            res = cur.fetchone()
-            if not res[0]:
-                cur.execute("INSERT INTO users (id) VALUES (%s)", (user_id,))
-                
-                
-            cur.execute("SELECT EXISTS(SELECT * FROM guilds WHERE id=%s)", (guild_id,))#If Guild Is Not Found Create It.
-            res = cur.fetchone()
-            if not res[0]:
-                cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
+    #cur.execute("SELECT user_id FROM members WHERE guild_id=%s ORDER BY exp ASC", (key[1],))
+    #res = cur.fetchall()
+    #for i, row in enumerate(res):
+    #    if row[0] == int(key[0]):
+    #        return i + 1
+    #return 999
 
 
-            cur.execute("INSERT INTO members (user_id, guild_id, exp) VALUES (%s, %s, %s)", (user_id, guild_id, 1))# Create Member.
-            conn.commit()
-            
-            
-            cur.execute("SELECT exp, infraction_description, infraction_date FROM members WHERE user_id=%s and guild_id=%s", (user_id, guild_id))
-            selected = cur.fetchone()
-            retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0], "infraction_description": selected[1], "infraction_date": selected[2]}
-            member_cache[f"{user_id}:{guild_id}"] = retval
-        if selected[0] is None:# If EXP Is Not Exist
-            cur.execute("UPDATE members SET exp = %s WHERE user_id=%s AND guild_id=%s", (1,user_id,guild_id))
-            conn.commit()
-            cur.execute("SELECT exp, infraction_description, infraction_date FROM members WHERE user_id=%s and guild_id=%s", (user_id,guild_id))
-            selected = cur.fetchone()
-            
-        retval = {"user_id": user_id, "guild_id": guild_id, "exp": selected[0], "infraction_description": selected[1], "infraction_date": selected[2]}
-        member_cache[f"{user_id}:{guild_id}"] = retval
-
-    return retval
-
-
-
-
-def get_guild(guild_id):
-    retval = guild_cache.get(guild_id)
-    if retval is None:
-
-        cur = conn.cursor()
-        cur.execute("""SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
-                    automod_links, automod_invites, automod_mention, automod_swears, 
-                    welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel, 
-                    modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick, FROM guilds WHERE id=%s""", (guild_id,))
-        selected = cur.fetchone()
-        if selected is None:# If Guild Is Not Found... Create It
-            cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
-            conn.commit()
-            
-            
-        retval = {
-            "guild_id": guild_id, 
-            "role_rewards": selected[0],
-            "toggle": {
-                "moderation": selected[1], 
-                "automod": selected[2], 
-                "welcomer": selected[3], 
-                "autoresponder": selected[4], 
-                "leveling": selected[5], 
-                "autorole": selected[6], 
-                "reactionroles": selected[7], 
-                "music": selected[8], 
-                "modlog": selected[9]
-                },
-            "automod": {
-                "links": selected[10],
-                "invites": selected[11],
-                "mention": selected[12],
-                "swears": selected[13]
-                },
-            "welcome": {
-                "join": {
-                    "channel": selected[14],
-                    "message": selected[15],
-                    "role": selected[16],
-                    "private": selected[17]
-                },
-                "leave": {
-                    "message": selected[18],
-                    "channel": selected[19]
-                }
-                },
-            "modlog": {
-                "channel": selected[20],
-                "bans": selected[21],
-                "warns": selected[22],
-                "mutes": selected[23],
-                "purge": selected[24],
-                "lock": selected[25],
-                "kick": selected[26],
-            }
-            }
-        guild_cache[guild_id] = retval
-
-    return retval
 
 
 
@@ -238,6 +107,15 @@ def get_guild(guild_id):
   #Each Cog In In The Same File In Order To Share The Cache But They Are Still Individual Cogs And Can Be Enabled & Disabled
   
   #The First One Is The Leveling Cog As Defined In the Class Below.  Everything Inside That Class Is To Do With Leveling
+  
+def get_member(guild_id, member_id):
+    guild = cache.get_guild(guild_id)
+    for i, member in enumerate(guild["members"]):
+        if member["user_id"] == member_id:
+            return guild, i
+    cache.create_member(guild_id, member_id)
+    get_member(guild_id, member_id)
+  
 class Leveling(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -247,13 +125,7 @@ class Leveling(commands.Cog):
             f.close()
         
         
-    def __del__(self):
-        print("Clearing Cache...")
-        for i in range(member_cache.currsize):
-            member_cache.popitem()
-        for i in range(guild_cache.currsize):
-            guild_cache.popitem()
-        print("Cache Has Been Emptied!")
+
 
 
 
@@ -421,9 +293,11 @@ class Leveling(commands.Cog):
         if message.author == self.bot.user:# To Make Sure Not Responding To Bot's Own Message
             return
 
-        member = get_member(message.author.id, message.guild.id)
         
-        guild = get_guild(message.guild.id)
+        guild = cache.get_guild(message.guild.id)
+        
+        guild, index = cache.find_member(message.author.id)
+        
         
         #START OF AUTOMOD
         if guild["toggle"]["automod"]:
@@ -461,7 +335,7 @@ class Leveling(commands.Cog):
                     await message.delete()
             #END OF AUTOMOD
 
-        total_exp = member["exp"]
+        total_exp = guild["members"][index]["exp"]
         exp = total_exp
         x = exp
         y = 0
@@ -477,7 +351,7 @@ class Leveling(commands.Cog):
         remaining = total_exp_next_actual - total_exp
 
 
-        member = {"guild": member["guild_id"], "level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
+        #member = {"guild": guild["members"][index]["guild_id"], "level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
                 #guild, level, total_exp, total_exp_next_actual, total_exp_next_display, remaining
 
         x = cooldown.get(message.author.id)
@@ -485,45 +359,15 @@ class Leveling(commands.Cog):
             return
         cooldown[message.author.id] = True
         increase = random.randint(15, 20)
-        member_cache[f"{message.author.id}:{message.guild.id}"]["exp"] += increase
+        guild["members"][index]["exp"] += increase
+        cache.update_guild(guild)
         if increase >= remaining:
-            await message.channel.send(f"**{message.author.name}** Has Leveled Up To Level **{member['level'] + 1}**!")
+            await message.channel.send(f"**{message.author.name}** Has Leveled Up To Level **{guild['members'][index]['level'] + 1}**!")
 
 
 
 
 
-
-
-  #Cache Operations Are Below Here
-  #Please Note that cache.clear() breaks it so do not EVER use. Iterate Through Cache.pop when shutting down.
-    @commands.is_owner()
-    @commands.command(name="cacheclear")
-    async def _cacheclear(self, ctx):
-        await ctx.send("Clearing Cache...")
-        for i in range(member_cache.currsize):
-            member_cache.popitem()
-            
-        for i in range(guild_cache.currsize):
-            guild_cache.popitem()
-            
-        await ctx.send("Guild and Member Cache Has Been Emptied")
-
-
-    @commands.is_owner()
-    @commands.command(name="cache")
-    async def _cache(self, ctx):
-        await ctx.send("Printing Cache...")
-        print(member_cache)
-        print("--- Above Is Member Below Is Guild ---")
-        print(guild_cache)
-        
-    @commands.is_owner()
-    @commands.command(name="cachepop")
-    async def _cachepop(self, ctx):
-        print(member_cache)
-        await ctx.send("Popping Cache...")
-        member_cache.popitem()
 
 
 
@@ -585,7 +429,7 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members = True)
     async def ban(self, ctx: SlashContext,member:discord.Member, days : int = None, hours : int = None, mins : int = None, reason = "The Ban Hammer Has Spoken!"):
         '''Ban a User'''
-        guild = get_guild(ctx.guild.id)
+        guild = cache.get_guild(ctx.guild.id)
         if ctx.author.top_role.position > member.top_role.position:# If Author Has Higher Role Than Person They Are Trying To Ban.  So Mods Can't Ban Admins or Mods Can't Ban Other Mods
             if days or hours or mins:# If Time Is Provided
                 try:
@@ -610,7 +454,7 @@ class Moderation(commands.Cog):
                     self.ban_guild_list.append(ctx.guild.id)
                     if guild["toggle"]["modlog"]:
                         if guild["modlog"]["channel"] and guild["modlog"]["bans"]:
-                            channel = self.bot.get_channel(guild_cache["modlog"]["channel"])
+                            channel = self.bot.get_channel(guild["modlog"]["channel"])
                             if not channel:
                                 guild["modlog"]["channel"] = None
                                 return
@@ -648,7 +492,7 @@ class Moderation(commands.Cog):
     async def mute(self, ctx, member: discord.Member, reason=None, days : int = None, hours : int = None, mins : int = None):
         '''Mute a User'''
         role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
-        guild = get_guild(ctx.guild.id)
+        guild = cache.get_guild(ctx.guild.id)
         if not role: # checks if there is muted role
             muted = await member.guild.create_role(name="Muted", reason="To use for muting")
             for channel in member.guild.channels: # removes permission to view and send in the channels 
@@ -703,6 +547,7 @@ class Moderation(commands.Cog):
                         channel = self.bot.get_channel(guild["modlog"]["channel"])
                         if not channel:
                             guild["modlog"]["channel"] = None
+                            cache.update_guild(guild)
                             return
                         embed=discord.Embed(title="User Mute Event", description=f"{member.display_name}#{member.discriminator} Has Been Muted", color=0x4d003c)
                         embed.add_field(name="Muted By:", value=ctx.author.mention, inline=False)
@@ -718,7 +563,7 @@ class Moderation(commands.Cog):
     async def unmute(self, ctx, member: discord.Member):
         '''Unmute a User'''
         role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
-        guild = get_guild(ctx.huild.id)
+        guild = cache.get_guild(ctx.guild.id)
         if not role: # checks if there is muted role
             muted = await member.guild.create_role(name="Muted", reason="To use for muting")
             for channel in member.guild.channels: # removes permission to view and send in the channels 
@@ -733,6 +578,7 @@ class Moderation(commands.Cog):
                         channel = self.bot.get_channel(guild["modlog"]["channel"])
                         if not channel:
                             guild["modlog"]["channel"] = None
+                            cache.update_guild(guild)
                             return
                         embed=discord.Embed(title="User Unmute Event", description=f"{member.display_name}#{member.discriminator} Has Been Unmuted", color=0x4d003c)
                         embed.add_field(name="Unmuted By:", value=ctx.author.mention, inline=False)
@@ -747,7 +593,7 @@ class Moderation(commands.Cog):
     async def kick(self, ctx, member : discord.Member, reason = None):
         '''Kick a User'''
         if ctx.author.top_role.position > member.top_role.position:
-            guild = get_guild(ctx.guild.id)
+            guild = cache.get_guild(ctx.guild.id)
             await member.kick(reason=reason)
             embed=discord.Embed(title="User Has Been Kicked!", color=0xffb6f2)
 
@@ -760,6 +606,7 @@ class Moderation(commands.Cog):
                     channel = self.bot.get_channel(guild["modlog"]["channel"])
                     if not channel:
                         guild["modlog"]["channel"] = None
+                        cache.update_guild(guild)
                         return
                     embed=discord.Embed(title="User Kick Event", description=f"{member.display_name}#{member.discriminator} Has Been Kicked", color=0x4d003c)
                     embed.add_field(name="Kicked By:", value=ctx.author.mention, inline=False)
@@ -783,15 +630,12 @@ class Moderation(commands.Cog):
         if len(reason) > 150:
             await ctx.send(f"Your Warn Reason Cannot Be Longer Than 150 Characters. (Currently {len(reason)})", hidden=True)
             return
-        cache = get_member(member.id, ctx.guild.id)
-        if not cache["infraction_description"]:
-            cache["infraction_description"] = []
-            cache["infraction_date"] = []
+        guild = cache.get_guild(ctx.guild.id)
+        guild, index = cache.find_member(guild, member.id)
 
-        guild = get_guild(ctx.guild.id)
             
-        cache["infraction_description"].append(reason)
-        cache["infraction_date"].append(datetime.now().date())
+        guild["members"][index]["infraction_description"].append(reason)
+        guild["members"][index]["infraction_date"].append(datetime.now().date())
         await ctx.send(f'{member.mention} Has Been Warned For: **{reason}**')
         
         if guild["toggle"]["modlog"]:# Modlog For Warn Command
@@ -804,39 +648,41 @@ class Moderation(commands.Cog):
                 embed.add_field(name="Warned By:", value=ctx.author.mention, inline=False)
                 embed.add_field(name="Warn Reason:", value=reason, inline=True)
                 await channel.send(embed=embed)
-        
+        cache.update_guild(guild)
         
     @cog_ext.cog_slash(guild_ids=guild_ids)
     async def infractions(self, ctx, member : discord.Member):
         '''Get A List Of Infractions Of a User'''
-        cache = get_member(member.id, ctx.guild.id)
-        if not cache["infraction_description"]:
+        guild = cache.get_guild(ctx.guild.id)
+        guild, index = cache.find_member(guild, member.id)
+        if not guild["members"][index]["infraction_description"]:
             embed=discord.Embed(color=0xffb6f2)
             embed.set_author(name=f"{member.display_name}#{member.discriminator} Has No Infractions", icon_url=member.avatar_url)
             await ctx.send(embed=embed)
             return
         else:
-            index = len(cache["infraction_date"]) - 1# Since Indexes Start At 0 & Length Starts At 1 It Is The Index Of The element To Be Added
+            index = len(guild["members"][index]["infraction_date"]) - 1# Since Indexes Start At 0 & Length Starts At 1 It Is The Index Of The element To Be Added
             
-        cache["infraction_description"]
-        cache["infraction_date"].append(datetime.now().date())
+        guild["members"][index]["infraction_description"]
+        guild["members"][index]["infraction_date"].append(datetime.now().date())
         embed=discord.Embed(color=0xffb6f2)
-        embed.set_author(name=f"{member.display_name}#{member.discriminator} Has {len(cache['infraction_description'])} Infractions", icon_url=member.avatar_url)
-        for i, infraction in enumerate(cache["infraction_description"]):# Iterate Over The Infractions
+        embed.set_author(name=f"{member.display_name}#{member.discriminator} Has {len(guild['members'][index]['infraction_description'])} Infractions", icon_url=member.avatar_url)
+        for i, infraction in enumerate(guild['members'][index]["infraction_description"]):# Iterate Over The Infractions
             if i >= 10:# To Limit The Infractions Displayed To 10
                 break
-            embed.add_field(name="⠀", value=f"**{infraction}** • {cache['infraction_date'][i].strftime('%d/%m/%y')}", inline=False)
+            embed.add_field(name="⠀", value=f"**{infraction}** • {guild['members'][index]['infraction_date'][i].strftime('%d/%m/%y')}", inline=False)
         embed.set_footer(text="Showing The Most Recent 10")
         await ctx.send(embed=embed)
         
     @cog_ext.cog_slash(name="clear-infractions", guild_ids=guild_ids)
     async def _clearinfractions(self, ctx, member : discord.Member):
         '''Clear All Infractions Of A Specified User'''
-        cache = get_member(member.id, ctx.guild.id)
-        guild = get_guild(ctx.guild.id)
-        cache["infraction_description"] = None# Set All Infractions Back To None or NULL
-        cache["infraction_date"] = None
+        guild = cache.get_guild(ctx.guild.id)
+        guild, index = cache.find_member(member.id)
+        guild["members"][index]["infraction_description"] = None# Set All Infractions Back To None or NULL
+        guild["members"][index]["infraction_date"] = None
         await ctx.send(f"Cleared All Infractions Of {member.mention}")
+        cache.update_guild(guild)
         if guild["toggle"]["modlog"]:# Modlog For Clear Warns Command
             if guild["modlog"]["channel"] and guild["modlog"]["warns"]:
                 channel = self.bot.get_channel(guild["modlog"]["channel"])
@@ -868,7 +714,7 @@ class Moderation(commands.Cog):
     async def lock(self, ctx, channel : discord.TextChannel=None):
         '''Lock A Channel.  Blocks The Default Role From Sending Messages.'''
         channel = channel or ctx.channel
-        guild = get_guild(ctx.guild.id)
+        guild = cache.get_guild(ctx.guild.id)
         overwrite = channel.overwrites_for(ctx.guild.default_role)
         overwrite.send_messages = False
         await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
@@ -878,6 +724,7 @@ class Moderation(commands.Cog):
                 channel = self.bot.get_channel(guild["modlog"]["channel"])
                 if not channel:
                     guild["modlog"]["channel"] = None
+                    cache.update_guild(guild)
                     return
                 embed=discord.Embed(title="Channel Lock Event", description=f"{channel.mention} Has Been Locked", color=0x4d003c)
                 embed.add_field(name="Locked By:", value=ctx.author.mention, inline=False)
@@ -908,12 +755,13 @@ class Moderation(commands.Cog):
         else:
             await ctx.send(f"Successfully Deleted {amount} Messages.", hidden=True)
         
-        guild = get_guild(ctx.guild.id)
+        guild = cache.get_guild(ctx.guild.id)
         if guild["toggle"]["modlog"]:# Modlog For Clear Command
             if guild["modlog"]["channel"] and guild["modlog"]["purge"]:
                 channel = self.bot.get_channel(guild["modlog"]["channel"])
                 if not channel:
                     guild["modlog"]["channel"] = None
+                    cache.update_guild()
                     return
                 embed=discord.Embed(title="User Purge Event", description=f"{ctx.channel.mention} Has Been Cleared", color=0x4d003c)
                 embed.add_field(name="Cleared By:", value=ctx.author.mention, inline=False)
@@ -1554,13 +1402,14 @@ class Welcome(commands.Cog):
     
     @commands.cog.listener()
     async def on_member_join(self, member):
-        guild_cache = get_guild(member.guild.id)
+        guild_cache = cache.get_guild(member.guild.id)
         if guild_cache["toggle"]["welcomer"]:
             if guild_cache["welcome"]["join"]["channel"]:
                 channel = self.bot.get_channel(guild_cache["welcome"]["join"]["channel"])
                 if not channel:
                     guild_cache["welcome"]["join"]["channel"] = None
                     guild_cache["welcome"]["join"]["message"] = None
+                    cache.update_guild(guild_cache)
                     
                 else:
                     await channel.send(guild_cache["welcome"]["join"]["message"][0].replace("{user.mention}", member.mention).replace("{user.display}", f"{member.display_name}#{member.discriminatior}").replace("{guild.name}", member.guild.name))
@@ -1572,17 +1421,19 @@ class Welcome(commands.Cog):
                 role = discord.utils.get(member.guild.roles, id=guild_cache["welcome"]["join"]["role"])
                 if role is None:
                     guild_cache["welcome"]["join"]["role"] = None
+                    cache.update_guild(guild_cache)
                 await member.add_roles(role)
                 
     @commands.cog.listener()
     async def on_member_leave(self, member):
-        guild_cache = get_guild(member.guild.id)
+        guild_cache = cache.get_guild(member.guild.id)
         if guild_cache["toggle"]["welcomer"]:
             if guild_cache["welcome"]["leave"]["channel"]:
                 channel = self.bot.get_channel(guild_cache["welcome"]["leave"]["channel"])
                 if not channel:
                     guild_cache["welcome"]["leave"]["channel"] = None
                     guild_cache["welcome"]["leave"]["message"] = None
+                    cache.update_guild(guild_cache)
                     
                 else:
                     await channel.send(guild_cache["welcome"]["leave"]["message"][0].replace("{user.display}", f"{member.display_name}#{member.discriminatior}").replace("{guild.name}", member.guild.name))
