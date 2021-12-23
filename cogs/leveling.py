@@ -18,6 +18,7 @@ from discord import File
 from discord.ext import commands, tasks
 from discord_slash import SlashContext, cog_ext
 from modules import cache_get as cache
+from modules import rank_bg as background
 from PIL import Image, ImageDraw, ImageFont
 from youtube_dl.utils import DownloadError
 
@@ -151,10 +152,8 @@ class Leveling(commands.Cog):
         percent = round(percent)
         percent = int(percent)
 
-        #if user_id == 416617058248425473:
-        #    background_image = Image.open("/root/drive/Development/Sabre/cogs/other/bridge.png")
-        #else:
-        background_image = Image.open("other/haloween.png")
+
+        background_image = Image.open(background.fetch(author.id))
         background_image = background_image.convert('RGBA') # add channel ALPHA to draw transparent rectangle
  #            image = Image.open('Cockatoo-min.png')
         AVATAR_SIZE = 256
