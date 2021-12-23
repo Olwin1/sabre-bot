@@ -97,7 +97,7 @@ def get_member_rank(key):
     #for i, row in enumerate(res):
     #    if row[0] == int(key[0]):
     #        return i + 1
-    #return 999
+    return 999
 
 
 
@@ -108,14 +108,7 @@ def get_member_rank(key):
   
   #The First One Is The Leveling Cog As Defined In the Class Below.  Everything Inside That Class Is To Do With Leveling
   
-def get_member(guild_id, member_id):
-    guild = cache.get_guild(guild_id)
-    for i, member in enumerate(guild["members"]):
-        if member["user_id"] == member_id:
-            return guild, i
-    cache.create_member(guild_id, member_id)
-    get_member(guild_id, member_id)
-  
+
 class Leveling(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -137,10 +130,11 @@ class Leveling(commands.Cog):
             author = ctx.author
         else:
             author = member
-        member = get_member(author.id, ctx.guild.id)
+        guild = cache.get_guild(ctx.guild.id)
+        guild, index = cache.find_member(guild, author.id)
 
 
-        total_exp = member["exp"]
+        total_exp = guild["members"][index]["exp"]
         exp = total_exp
         x = exp
         y = 0
@@ -296,7 +290,7 @@ class Leveling(commands.Cog):
         
         guild = cache.get_guild(message.guild.id)
         
-        guild, index = cache.find_member(message.author.id)
+        guild, index = cache.find_member(guild, message.author.id)
         
         
         #START OF AUTOMOD
@@ -351,7 +345,7 @@ class Leveling(commands.Cog):
         remaining = total_exp_next_actual - total_exp
 
 
-        #member = {"guild": guild["members"][index]["guild_id"], "level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
+        #member = {"guild": guild["members"][index]["g_id"], "level": level, "total_exp": total_exp, "total_exp_next_actual": total_exp_next_actual, "total_exp_next_display": total_exp_next_display, "remaining": remaining, "exp": total_exp_next_display - remaining}
                 #guild, level, total_exp, total_exp_next_actual, total_exp_next_display, remaining
 
         x = cooldown.get(message.author.id)
@@ -1400,7 +1394,7 @@ class Welcome(commands.Cog):
         self.bot = bot
         
     
-    @commands.cog.listener()
+    @commands.Cog.listener()
     async def on_member_join(self, member):
         guild_cache = cache.get_guild(member.guild.id)
         if guild_cache["toggle"]["welcomer"]:
@@ -1424,7 +1418,7 @@ class Welcome(commands.Cog):
                     cache.update_guild(guild_cache)
                 await member.add_roles(role)
                 
-    @commands.cog.listener()
+    @commands.Cog.listener()
     async def on_member_leave(self, member):
         guild_cache = cache.get_guild(member.guild.id)
         if guild_cache["toggle"]["welcomer"]:

@@ -11,7 +11,7 @@ def get_guild(guild_id):
         cur.execute("""SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
             automod_links, automod_invites, automod_mention, automod_swears, 
             welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel, 
-            modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick, FROM guilds WHERE id=%s""", (guild_id,))
+            modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick FROM guilds WHERE id=%s""", (guild_id,))
         selected = cur.fetchone()
         if selected is None:# If Guild Is Not Found... Create It
             cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
@@ -19,13 +19,14 @@ def get_guild(guild_id):
             cur.execute("""SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
             automod_links, automod_invites, automod_mention, automod_swears, 
             welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel, 
-            modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick, FROM guilds WHERE id=%s""", (guild_id,))
+            modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick FROM guilds WHERE id=%s""", (guild_id,))
             selected = cur.fetchone()
+    
             
             
             
         guild = {
-            "guild_id": guild_id, 
+            "id": guild_id, 
             "role_rewards": selected[0],
             "toggle": {
                 "moderation": selected[1], 
@@ -72,11 +73,12 @@ def get_guild(guild_id):
         cur.execute("SELECT user_id, exp, infraction_description, infraction_date FROM members WHERE guild_id=%s", (guild_id,))
         selected_members = cur.fetchall()
         for member in selected_members:
-            guild["members"].append({"user_id": member[0], "guild_id": guild_id, "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
+            guild["members"].append({"u_id": member[0], "g_id": guild_id, "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
             
-        r.set(guild["guild_id"], guild)
+        r.set(guild["id"], json.dumps(guild))
             
         return guild
+    return json.loads(value)
 
 
 def get_user(arg):
@@ -93,17 +95,20 @@ def get_user(arg):
             
     user = {"id": selected[0], "bday": selected[1]}
     
-    r.set(user["id"], user)
+    r.set(user["id"], json.dumps(user))
             
     return user
 
 def create_member(guild, user_id):
     cur = conn.cursor()
+    cur.execute("SELECT EXISTS(SELECT id FROM users WHERE id = %s)", (user_id,))
+    if not cur.fetchone()[0]:
+        cur.execute("INSERT INTO users (id) VALUES (%s)", (user_id,))
     cur.execute("INSERT INTO members (user_id, guild_id, exp) VALUES (%s, %s, %s)", (user_id, guild["id"], 1))# Create Member.
     conn.commit()
     cur.execute("SELECT user_id, exp, infraction_description, infraction_date FROM members WHERE user_id = %s AND guild_id=%s", (user_id, guild["id"]))
     member = cur.fetchone()
-    guild["members"].append({"user_id": member[0], "guild_id": guild["id"], "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
+    guild["members"].append({"user_id": member[0], "g_id": guild["id"], "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
     r.set(guild["id"], json.dumps(guild))
     return guild
     
@@ -111,7 +116,7 @@ def create_member(guild, user_id):
     
 def find_member(guild, member_id):
     for i, member in enumerate(guild["members"]):
-        if member["id"] == member_id:
+        if member["u_id"] == member_id:
             return guild, i
     create_member(guild["id"], member_id)
     find_member(guild, i)
