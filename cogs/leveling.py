@@ -10,20 +10,16 @@ import urllib
 from asyncio import tasks
 from datetime import datetime, timedelta
 
-import async_timeout
 import discord
-from discord import message
-import psycopg
 import youtube_dl
 from async_timeout import timeout
-from cachetools import LRUCache, TTLCache, cached
+from cachetools import TTLCache, cached
 from discord import File
 from discord.ext import commands, tasks
 from discord_slash import SlashContext, cog_ext
+from modules import cache_get as cache
 from PIL import Image, ImageDraw, ImageFont
 from youtube_dl.utils import DownloadError
-import redis
-from modules import cache_get as cache
 
 # Silence useless bug reports messages for Music
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -74,9 +70,6 @@ t.start()
 
 
 
-
-r = redis.Redis(host='161.97.86.11', port=6379, db=0, password="Q29ubmll")
-
 guild_ids = [704255331680911402]
 print("levleing is runnin")
 cooldown = TTLCache(maxsize=1024, ttl=20)
@@ -88,16 +81,14 @@ cooldown = TTLCache(maxsize=1024, ttl=20)
 
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=3600))# Cache To Store Member's Rank Compared To Others.  Instead Of Updating Just Deletes It After 60 Mins And Re-Orders It When Needed.
-def get_member_rank(key):
-    #cur = conn.cursor()
-    key = key.split(":")
-    #cur.execute("SELECT user_id FROM members WHERE guild_id=%s ORDER BY exp ASC", (key[1],))
-    #res = cur.fetchall()
-    #for i, row in enumerate(res):
-    #    if row[0] == int(key[0]):
-    #        return i + 1
-    return 999
+@cached(cache=TTLCache(maxsize=1024, ttl=3600))# Cache To Remember If Needs Re-Ordering Or Not. Only Executes Function Minimum every 60 mins per guild
+def order_ranks(key):
+    guild = cache.get_guild(key)
+    print("creating")
+    sorted_list = sorted(guild["members"], key=lambda y: y["exp"], reverse=True)
+    guild["members"] = sorted_list
+    cache.update_guild(guild)
+    return None
 
 
 
@@ -248,7 +239,10 @@ class Leveling(commands.Cog):
 
         y += 15
         text_width_level, text_height_level = draw.textsize("#", font=font_60)
-        draw.text((x + text_width_level, y - 30), str(get_member_rank(f"{author.id}:{author.guild.id}")), fill=(250,250,250, 250), font=font_75)
+        order_ranks(author.guild.id)
+        guild = cache.get_guild(author.guild.id)
+        guild, index = cache.find_member(guild, author.id)
+        draw.text((x + text_width_level, y - 30), str(index + 1), fill=(250,250,250, 250), font=font_75)
         
         
         # --- avatar ---
