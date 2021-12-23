@@ -93,9 +93,11 @@ def get_user(arg):
             cur.execute("SELECT id, birthday FROM users WHERE id = %s", (arg,))
             selected = cur.fetchone()
             
-    user = {"id": selected[0], "bday": selected[1]}
+        user = {"id": selected[0], "bday": selected[1]}
     
-    r.set(user["id"], json.dumps(user))
+        r.set(user["id"], json.dumps(user))
+    else:
+        user = json.loads(value)
             
     return user
 
