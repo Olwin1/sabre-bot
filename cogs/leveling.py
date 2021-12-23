@@ -154,6 +154,8 @@ class Leveling(commands.Cog):
 
 
         background_image = Image.open(background.fetch(author.id))
+        color = background.get_dominant_color(background_image)
+
         background_image = background_image.convert('RGBA') # add channel ALPHA to draw transparent rectangle
  #            image = Image.open('Cockatoo-min.png')
         AVATAR_SIZE = 256
@@ -169,7 +171,7 @@ class Leveling(commands.Cog):
         draw = ImageDraw.Draw(image)
 
  # CREATE YOUR FILL COLOUR HERE (CHANGE TO 245 AT END OF EVENT)
-        color=(202,98,45)
+        #color=(202,98,45) HALOWEEN COLOR
  # Draw circle at left of progress bar to round
         x, y, diam = 330, 406, 49
         draw.ellipse([x,y,x+diam,y+diam], fill=color)
