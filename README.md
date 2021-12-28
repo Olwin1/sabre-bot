@@ -12,5 +12,6 @@ Pillow
 PyNaCl
 redis
 Cryptography
+requests
 
 ADD FFMPEG TO PATH! (PYTHOn SCRIPTS)
