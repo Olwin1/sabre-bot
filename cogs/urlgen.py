@@ -1,5 +1,3 @@
-import asyncio
-
 import discord
 import discord.utils
 from cryptography.hazmat.backends import default_backend
