@@ -1,10 +1,10 @@
 import asyncio
 from datetime import datetime, timedelta
+
 import discord
+import requests
 from discord.ext import commands, tasks
 from discord_slash import SlashContext, cog_ext
-
-
 from modules import cache_get as cache
 
 guild_ids = [704255331680911402]
@@ -13,19 +13,13 @@ class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         
-
         self.countdown.start()
            
         self.ban_list = []
         self.ban_time_list = []
         self.ban_guild_list = []
         
-        
-        self.mute_list = []
-        self.mute_time_list = []
-        self.mute_guild_list = []
-        
-
+             
     #This is a background process
     @tasks.loop()
     async def countdown(self):
@@ -125,87 +119,69 @@ class Moderation(commands.Cog):
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(kick_members = True)
     async def mute(self, ctx, member: discord.Member, reason=None, days : int = None, hours : int = None, mins : int = None):
-        '''Mute a User'''
-        role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
+        '''Mute a User. Defaults To 5 Mins'''
+
         guild = cache.get_guild(ctx.guild.id)
-        if not role: # checks if there is muted role
-            muted = await member.guild.create_role(name="Muted", reason="To use for muting")
-            for channel in member.guild.channels: # removes permission to view and send in the channels 
-                await channel.set_permissions(muted, send_messages=False, speak=False)
-        for role in member.guild.roles:
-            if role.name == "Muted":
-                if days or hours or mins:# If Time Is Provided
-                    delay = 0
-                    if hours:# Converts Mins, Days and Hours Into A Seconds Total
-                        delay += hours * 60 * 60
-                    if mins:
-                        delay += mins * 60
-                    if days:
-                        delay += days * 24 * 60 * 60
-                        
-                        
-                    timer = datetime.now()
-                    timer += timedelta(seconds=delay)
-                    msg = f"{f'{days} Days(s), ' if days else ''}{f'{hours} Hours(s), ' if hours else ''}{f'{mins} Mins(s)' if mins else ''}"
-                    await member.add_roles(role)
-                    self.mute_list.append(member)# Add Member To The Unban Timer.
-                    self.mute_time_list.append(timer)
-                    self.mute_guild_list.append(ctx.guild.id)
-                    embed = discord.Embed(title="User Has Been Muted!", colour=0xffb6f2)
-                    embed.add_field(name="User", value=member.mention, inline=True)
-                    embed.add_field(name="Reason:", value=reason, inline=True)
-                    embed.add_field(name="Duration:", value=msg, inline=True)
-                    embed.add_field(name="Muted By", value=ctx.author.mention, inline=True)
-                    await ctx.send(embed=embed)
-                    if guild["toggle"]["modlog"]:
-                        if guild["modlog"]["channel"] and guild["modlog"]["mutes"]:
-                            channel = self.bot.get_channel(guild["modlog"]["channel"])
-                            if not channel:
-                                guild["modlog"]["channel"] = None
-                                return
-                            embed=discord.Embed(title="User Mute Event", description=f"{member.display_name}#{member.discriminator} Has Been Muted", color=0x4d003c)
-                            embed.add_field(name="Muted By:", value=ctx.author.mention, inline=False)
-                            embed.add_field(name="Mute Reason:", value=reason, inline=True)
-                            embed.add_field(name="Mute Duration", value=f"{f'{days} Days(s), ' if days else ''}{f'{hours} Hours(s), ' if hours else ''}{f'{mins} Mins(s)' if mins else ''}", inline=True)
-                            await channel.send(embed=embed)
-                    return
-                    
-                    
-                await member.add_roles(role)
-                embed = discord.Embed(title="User Has Been Muted!", colour=0xffb6f2)
-                embed.add_field(name="User", value=member.mention, inline=True)
-                embed.add_field(name="Reason:", value=reason, inline=True)
-                embed.add_field(name="Muted By", value=ctx.author.mention, inline=True)
-                await ctx.send(embed=embed)
-                if guild["toggle"]["modlog"]:# Modlog For Mute Command
-                    if guild["modlog"]["channel"] and guild["modlog"]["mutes"]:
-                        channel = self.bot.get_channel(guild["modlog"]["channel"])
-                        if not channel:
-                            guild["modlog"]["channel"] = None
-                            cache.update_guild(guild)
-                            return
-                        embed=discord.Embed(title="User Mute Event", description=f"{member.display_name}#{member.discriminator} Has Been Muted", color=0x4d003c)
-                        embed.add_field(name="Muted By:", value=ctx.author.mention, inline=False)
-                        embed.add_field(name="Mute Reason:", value=reason, inline=True)
-                        embed.add_field(name="Mute Duration", value="Permanent", inline=True)
-                        await channel.send(embed=embed)
-    
-                return
+        delay = 0
+        if hours:# Converts Mins, Days and Hours Into A Seconds Total
+            delay += hours * 60 * 60
+        if mins:
+            delay += mins * 60
+        if days:
+            delay += days * 24 * 60 * 60
+        
+        if delay > 2419199:
+            delay = 2419199
+            hours = 23
+            mins = 59
+            days = 27
+        elif delay == 0:
+            delay = 5 * 60
+            mins = 5
+                
+                
+            msg = f"{f'{days} Days(s), ' if days else ''}{f'{hours} Hours(s), ' if hours else ''}{f'{mins} Mins(s)' if mins else ''}"
+            
+            
+        headers = {"Authorization": f"Bot {self.bot.http.token}"}# Set Headers
+        url = f"https://discord.com/api/v9/guilds/{ctx.guild.id}/members/{member.id}"# Send Request To Mute User
+        timeout = (datetime.utcnow() + timedelta(seconds=delay)).isoformat()
+        json = {'communication_disabled_until': timeout}
+        session = requests.patch(url, json=json, headers=headers)
+        if session.status_code in range(200, 299):# When Mute Is Successful
+            embed = discord.Embed(title="User Has Been Muted!", colour=0xffb6f2)
+            embed.add_field(name="User", value=member.mention, inline=True)
+            embed.add_field(name="Reason:", value=reason, inline=True)
+            embed.add_field(name="Duration:", value=msg, inline=True)
+            embed.add_field(name="Muted By", value=ctx.author.mention, inline=True)
+            await ctx.send(embed=embed)
+            if guild["toggle"]["modlog"]:
+                if guild["modlog"]["channel"] and guild["modlog"]["mutes"]:
+                    channel = self.bot.get_channel(guild["modlog"]["channel"])
+                    if not channel:
+                        guild["modlog"]["channel"] = None
+                        cache.update_guild(guild)
+                        return
+                    embed=discord.Embed(title="User Mute Event", description=f"{member.display_name}#{member.discriminator} Has Been Muted", color=0x4d003c)
+                    embed.add_field(name="Muted By:", value=ctx.author.mention, inline=False)
+                    embed.add_field(name="Mute Reason:", value=reason, inline=True)
+                    embed.add_field(name="Mute Duration", value=f"{f'{days} Days, ' if days else ''}{f'{hours} Hours, ' if hours else ''}{f'{mins} Mins' if mins else ''}", inline=True)
+                    await channel.send(embed=embed)
+        else:# Oh No an ERROR!
+            await ctx.send("Oh No! I Failed To Mute The User! Do I Have The Right Permissions?")
             
             
     @cog_ext.cog_slash(guild_ids=guild_ids)
     @commands.has_permissions(kick_members = True)
     async def unmute(self, ctx, member: discord.Member):
         '''Unmute a User'''
-        role = discord.utils.get(member.guild.roles, name="Muted") # retrieves muted role returns none if there isn't 
         guild = cache.get_guild(ctx.guild.id)
-        if not role: # checks if there is muted role
-            muted = await member.guild.create_role(name="Muted", reason="To use for muting")
-            for channel in member.guild.channels: # removes permission to view and send in the channels 
-                await channel.set_permissions(muted, send_messages=False, speak=False)
-        for role in member.guild.roles:
-            if role.name == "Muted":
-                await member.remove_roles(role)
+        headers = {"Authorization": f"Bot {self.bot.http.token}"}# Set Headers
+        url = f"https://discord.com/api/v9/guilds/{ctx.guild.id}/members/{member.id}"# Send Request To Mute User
+
+        json = {'communication_disabled_until': None}
+        session = requests.patch(url, json=json, headers=headers)
+        if session.status_code in range(200, 299):# When Mute Is Successful
 
                 await ctx.send(f"{member.mention} Has Been Unmuted.")
                 if guild["toggle"]["modlog"]:# Modlog For Unmute Command
@@ -220,6 +196,8 @@ class Moderation(commands.Cog):
                         await channel.send(embed=embed)
     
                 return
+        else:
+            await ctx.send("Failed To Unmute User :(")
             
             
             
