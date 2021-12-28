@@ -132,8 +132,58 @@ def update_guild(guild):
 def update_user(user):
     r.set(user["id"], json.dumps(user))
 
+def make_space():
+    keys = []
+    for key in r.scan_iter("*"):
+        #size = r.execute_command("MEMORY USAGE", key)
+        idle = r.object("idletime", key)
+        keys.append({"k": key, "i": idle})
+        # idle time is in seconds. This is 90days
+        #if idle > 7776000:
+        #    r.delete(key)
+    sorted_list = sorted(keys, key=lambda y: y["i"], reverse=True)
+    x = True
+    iter = 0
+    while x:
+        if r.info()['used_memory'] < 2097152000:
+        #if length < r.execute_command("MEMORY USAGE", keys[iter]["k"]):
+            x = False
+        # SAVE CACHE TO SLOWSTORE
+        g = get_guild(keys[iter]["k"])
+        cur = conn.cursor()
+        if "members" in g:
+
+            cur.execute("""UPDATE guilds
+                SET role_rewards=%s, toggle_moderation=%s,  toggle_automod=%s, toggle_welcomer=%s, toggle_autoresponder=%s, toggle_leveling=%s, toggle_autorole=%s, toggle_reactionroles=%s, toggle_music=%s, toggle_modlog=%s, 
+                automod_links=%s, automod_invites=%s, automod_mention=%s, automod_swears=%s, 
+                welcome_join_channel=%s, welcome_join_message=%s, welcome_join_role=%s, welcome_join_message_p=%s, welcome_leave_message=%s, welcome_leave_channel=%s, 
+                modlog_channel=%s, modlog_bans=%s, modlog_warns=%s, modlog_mutes=%s, modlog_purge=%s, modlog_lock=%s, modlog_kick=%s
+                WHERE id=%s""", (g["role_rewards"], g["toggle"]["moderation"], g["toggle"]["automod"], g["toggle"]["welcomer"], g["toggle"]["autoresponder"], g["toggle"]["leveling"],
+                                g["toggle"]["autorole"], g["toggle"]["reactionroles"], g["toggle"]["music"], g["toggle"]["modlog"],
+                                g["automod"]["links"], g["automod"]["invites"], g["automod"]["mention"], g["automod"]["swears"],
+                                g["welcome"]["join"]["channel"], g["welcome"]["join"]["message"], g["welcome"]["join"]["role"], g["welcome"]["join"]["private"], g["welcome"]["leave"]["message"], g["welcome"]["leave"]["channel"],
+                                g["modlog"]["channel"], g["modlog"]["bans"], g["modlog"]["warns"], g["modlog"]["mutes"], g["modlog"]["purge"], g["modlog"]["lock"], g["modlog"]["kick"],
+                                g["id"]
+                                ))
+            
+            for member in g["members"]:
+                cur.execute("UPDATE members SET exp=%s, infraction_description=%s, infraction_date=%s WHERE user_id = %s AND guild_id=%s", (member["exp"], member["infraction_description"], member["infraction_date"], member["user_id"], member["g_id"]))
+            
+        else:
+            cur.execute("UPDATE users SET birthday=%s WHERE id = %s", (g["bday"],g["id"]))
+            
+        conn.commit()
+        
+        #REMOVE CACHE
+        r.delete
+        
+        
+        #Increment Iter By 1
+        iter += 1
 
 
+def __len__(self):
+    return r.dbsize()
 
 #role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, 
 # toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, 
