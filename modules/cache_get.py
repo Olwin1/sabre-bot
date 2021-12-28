@@ -1,7 +1,8 @@
+import json
+
 import psycopg
 import redis
 
-import json
 conn = psycopg.connect(dbname="sabre", user="postgres", password="***REMOVED***", host="localhost")
 r = redis.Redis(host='161.97.86.11', port=6379, db=0, password="Q29ubmll")
 def get_guild(guild_id):
@@ -75,6 +76,7 @@ def get_guild(guild_id):
         for member in selected_members:
             guild["members"].append({"u_id": member[0], "g_id": guild_id, "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
             
+        make_space()
         r.set(guild["id"], json.dumps(guild))
             
         return guild
@@ -95,6 +97,7 @@ def get_user(arg):
             
         user = {"id": selected[0], "bday": selected[1]}
     
+        make_space()
         r.set(user["id"], json.dumps(user))
     else:
         user = json.loads(value)
@@ -148,6 +151,7 @@ def make_space():
         if r.info()['used_memory'] < 2097152000:
         #if length < r.execute_command("MEMORY USAGE", keys[iter]["k"]):
             x = False
+            break
         # SAVE CACHE TO SLOWSTORE
         g = get_guild(keys[iter]["k"])
         cur = conn.cursor()
