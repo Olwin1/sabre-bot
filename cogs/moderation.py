@@ -41,17 +41,7 @@ class Moderation(commands.Cog):
                     del self.ban_guild_list[self.ban_time_list.index(day)]
                     del self.ban_time_list[self.ban_time_list.index(day)]
                     
-            for day in self.mute_time_list:
-                if day <= datetime.now():
-                    try:
-                        for role in self.mute_list[self.mute_time_list.index(day)].guild.roles:
-                            if role.name == "Muted":
-                                await self.mute_list[self.mute_time_list.index(day)].remove_roles(role)
-                    except:
-                        print('Error! User already unmuted!')
-                    del self.mute_list[self.mute_time_list.index(day)]# Remove user From Timer
-                    del self.mute_guild_list[self.mute_time_list.index(day)]
-                    del self.mute_time_list[self.mute_time_list.index(day)]
+
                 
     #Command starts here
     @cog_ext.cog_slash(guild_ids=guild_ids)
