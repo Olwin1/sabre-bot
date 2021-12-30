@@ -1,7 +1,6 @@
 import io
 import random
-import socket
-import threading
+
 
 
 
@@ -17,49 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 
-'''
-def worker():
-    """thread worker function"""
-    print('Worker')
-    HOST = 'localhost'  # Standard loopback interface address (localhost)
-    PORT = 63431        # Port to listen on (non-privileged ports are > 1023)
-    
-    s = socket.socket()
-    s.bind(('', PORT))        
-    print ("socket binded to %s" %(PORT))
-    
-    # put the socket into listening mode
-    s.listen(5)    
-    print ("socket is listening")           
-    
-    # a forever loop until we interrupt it or
-    # an error occurs
-    while True:
-    
-    # Establish connection with client.
-        c, addr = s.accept()    
-        print ('Got connection from', addr )
-        
-    #Get Data From Client
-        data = c.recv(1024)
-        print(data)
-    
-    # send a thank you message to the client. encoding to send byte type.
-        package = "Thank You For Connecting!" + str(data)
-        c.send(package.encode())
-    
-    # Close the connection with the client
-        c.close()
-    
-    # Breaking once connection closed
-        break
 
-
-threads = []
-t = threading.Thread(target=worker)
-threads.append(t)
-t.start()
-'''
 
 
 
