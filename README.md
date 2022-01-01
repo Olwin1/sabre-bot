@@ -13,5 +13,6 @@ PyNaCl
 redis
 Cryptography
 requests
+colored
 
 ADD FFMPEG TO PATH! (PYTHOn SCRIPTS)
