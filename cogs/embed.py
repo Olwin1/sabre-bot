@@ -1,14 +1,10 @@
-
-
-#import discord
-import asyncio
-import aiohttp
 import json
 import socket
 import threading
 import requests
 from discord import Embed
-from discord.ext import commands, tasks
+from discord.ext import commands
+from colored import fg, bg, attr
 
 #from modules import cache_get as cache
 
@@ -27,7 +23,7 @@ class Embeder(commands.Cog):
         
 
     def server_program(self):
-        print("Embed API Initiating")
+        print(f"{fg(197)}Embed API Initiating{attr('reset')}")
         # get the hostname
         host = socket.gethostname()
         port = 63431  # initiate port no above 1024
@@ -119,8 +115,6 @@ class Embeder(commands.Cog):
             conn.close()  # close the connection
 
 
-
-        
 
 
 
