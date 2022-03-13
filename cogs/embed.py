@@ -51,10 +51,13 @@ class Embeder(commands.Cog):
                     break
                 print("from connected user: " + str(data))
                 data = json.loads(str(data))
+                typ = data["type"]
                 data = json.loads(str(data["data"]))
                 print("josn below")
                 print(data)
                 print("-----------")
+                retval = {}
+                if typ == "sendEmbed":
                 embed = {}
  
                 for k,v in data.items():
@@ -117,7 +120,7 @@ class Embeder(commands.Cog):
                     
 
 
-                conn.send(str("r.content").encode())  # send data to the client
+                conn.send(json.dumps(retval).encode())  # send data to the client
 
             conn.close()  # close the connection
 
