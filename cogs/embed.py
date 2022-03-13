@@ -2,10 +2,13 @@ import json
 import socket
 import threading
 import asyncio
+import aiohttp
 import requests
-from discord import Embed
+from discord import Embed, Permissions
 from discord.ext import commands
 from colored import fg, bg, attr
+from modules import cache_get as cache
+import json
 
 #from modules import cache_get as cache
 
@@ -30,6 +33,17 @@ class Embeder(commands.Cog):
         host = "localhost"
         print(host)
         port = 63432  # initiate port no above 1024
+
+        
+        
+        async def getUserGuilds(token):
+            async with aiohttp.ClientSession() as session:
+                async with session.get('https://discord.com/api/v9/users/@me/guilds', headers={"Authorization": token}) as response:
+
+                    print("Status:", response.status)
+                    print("Content-type:", response.headers['content-type'])
+
+                    return await response.json()
 
         server_socket = socket.socket()  # get instance
         # look closely. The bind() function takes tuple as argument
@@ -117,6 +131,29 @@ class Embeder(commands.Cog):
                     self.bot.loop.create_task(channel.send(embed=embed))
                 else:
                     self.bot.loop.create_task(channel.send(embed=embed,content=data["content"]))
+                    retval["result"] = "success"
+                        
+                        
+                elif typ == "getGuilds":
+
+
+
+                    #retval = asyncio.run(getUserGuilds("Bearer " + data["token"]))
+                    guilds = await getUserGuilds("Bearer " + data["token"])
+                    retval["guilds"] = []
+                    for i in guilds:
+                        perms = Permissions(int(i["permissions"]))
+                        if perms.manage_guild:
+                            y = {"id": i["id"], "name": i["name"], "icon": i["icon"]}
+                            if cache.get_guildExists(i["id"]):
+                                y["hasSabre"] = True
+                            else:
+                                y["hasSabre"] = False
+                            retval["guilds"].append(y)
+                                
+                                
+                            
+                    
                     
 
 
