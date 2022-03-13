@@ -186,6 +186,21 @@ def make_space():
         iter += 1
 
 
+def get_guildExists(guild_id):
+    value = r.get(guild_id)
+    if value is None:
+        cur = conn.cursor()
+        cur.execute("""SELECT id FROM guilds WHERE id=%s""", (guild_id,))
+        selected = cur.fetchone()
+        if selected:
+            return True
+        else:
+            return False
+    else:
+        return True
+
+
+
 def __len__(self):
     return r.dbsize()
 
