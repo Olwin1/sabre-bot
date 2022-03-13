@@ -1,6 +1,7 @@
 import json
 import socket
 import threading
+import asyncio
 import requests
 from discord import Embed
 from discord.ext import commands
@@ -25,8 +26,9 @@ class Embeder(commands.Cog):
     def server_program(self):
         print(f"{fg(197)}Embed API Initiating{attr('reset')}")
         # get the hostname
-        host = socket.gethostname()
-        port = 63431  # initiate port no above 1024
+        host = "localhost"
+        print(host)
+        port = 63432  # initiate port no above 1024
 
         server_socket = socket.socket()  # get instance
         # look closely. The bind() function takes tuple as argument
@@ -48,69 +50,73 @@ class Embeder(commands.Cog):
                     break
                 print("from connected user: " + str(data))
                 data = json.loads(str(data))
-                
-                guild_id = data["g"]
-                channel_id = data["c"]
-                embeds = []
-                for e in data["e"]:
-                
-                    if not e["b"]["t"]:
-                        e["b"]["t"] = Embed.Empty
-                    if not e["b"]["u"]:
-                        e["b"]["u"] = Embed.Empty
-                    if not e["b"]["d"]:
-                        e["b"]["d"] = Embed.Empty
-                    if not e["b"]["c"]:
-                        e["b"]["c"] = Embed.Empty
-                        
-                    if not e["fo"]["i"]:
-                        e["fo"]["i"] = Embed.Empty
-                        
-                    if not e["a"]["t"]:
-                        e["a"]["t"] = Embed.Empty
-                    if not e["a"]["u"]:
-                        e["a"]["u"] = Embed.Empty
-                    if not e["a"]["i"]:
-                        e["a"]["i"] = Embed.Empty
-                        
-                    print(e["b"]["t"])
-                    
-                    embed=Embed(title=e["b"]["t"], url=e["b"]["u"], description=e["b"]["d"], color=e["b"]["c"])
-                    #embed=Embed(title='e["b"]["t"]', url='e["b"]["u"]', description='e["b"]["d"]', color=0xeb4034)
-
-                    embed.set_author(name=e["a"]["t"], url=e["a"]["u"], icon_url=e["a"]["i"])
-                    for field in e["fi"]:
-                        if not field["v"]:
-                            field["v"] = Embed.Empty
-                        if not field["n"]:
-                            field["n"] = "⠀"
-                        embed.add_field(name=field["n"], value=field["v"], inline=field["i"])
-                    if e["i"]:
-                        embed.set_image(url=e["i"])
-                    if e["t"]:
-                        embed.set_thumbnail(url=e["t"])
-                    
-                    
-                    if e["fo"]["f"] and e["fo"]["t"]:
-                        text = f"{e['fo']['f']}•{e['fo']['f']}"
-                    elif e["fo"]["t"]:
-                        text = e["fo"]["t"]
-                    elif e["fo"]["f"]:
-                        text = e["fo"]["f"]
+                data = json.loads(str(data["data"]))
+                print("josn below")
+                print(data)
+                print("-----------")
+                embed = {}
+ 
+                for k,v in data.items():
+                    print("...")
+                    if v == "":
+                        data[k] = Embed.Empty
                     else:
-                        text = Embed.Empty
-                    if not e["fo"]["i"]:
-                        e["fo"]["i"] = Embed.Empty
-                    embed.set_footer(text=text, icon_url=e["fo"]["i"])
-                    embeds.append(embed.to_dict())
+                        print(k,v)
+                    print("****")
+                print("end")
+                print(data)
+                        
+                    #print(f["b"]["t"])
+#                    
+#                    embed=Embed(title=e["b"]["t"], url=e["b"]["u"], description=e["b"]["d"], color=e["b"]["c"])
+#                    #embed=Embed(title='e["b"]["t"]', url='e["b"]["u"]', description='e["b"]["d"]', color=0xeb4034)
+#
+#                    embed.set_author(name=e["a"]["t"], url=e["a"]["u"], icon_url=e["a"]["i"])
+#                    for field in e["fi"]:
+#                        if not field["v"]:
+#                            field["v"] = Embed.Empty
+#                        if not field["n"]:
+#                            field["n"] = "⠀"
+#                        embed.add_field(name=field["n"], value=field["v"], inline=field["i"])
+#                    if e["i"]:
+#                        embed.set_image(url=e["i"])
+#                    if e["t"]:
+#                        embed.set_thumbnail(url=e["t"])
+#                    
+#                    
+#                    if e["fo"]["f"] and e["fo"]["t"]:
+#                        text = f"{e['fo']['f']}•{e['fo']['f']}"
+#                    elif e["fo"]["t"]:
+#                        text = e["fo"]["t"]
+#                    elif e["fo"]["f"]:
+#                        text = e["fo"]["f"]
+#                    else:
+#                        text = Embed.Empty
+#                    if not e["fo"]["i"]:
+#                        e["fo"]["i"] = Embed.Empty
+#                    embed.set_footer(text=text, icon_url=e["fo"]["i"])
+#                    embeds.append(embed.to_dict()) """
+#                
                 
-                
-                headers = {"Authorization": f"Bot {self.bot.http.token}"}
-                sendData = {"embeds": embeds}
-                r = requests.post(f'https://discord.com/api/v8/channels/{channel_id}/messages', json=sendData, headers=headers)
+                #headers = {"Authorization": f"Bot {self.bot.http.token}"}
+                #sendData = {"embeds": embeds}
+                #r = requests.post(f'https://discord.com/api/v8/channels/{channel_id}/messages', json=sendData, headers=headers)
+                embed=Embed(title=data["title"], url=data["url"], description=data["desc"], color=int(data["colour"].replace("#", ""), 16))
+                embed.set_author(name=data["a"], url=data["a_url"])
+                for i, v in enumerate(data["fields"]):
+                    embed.add_field(name=data["fields_t"][i], value=v, inline=False)
+                embed.set_image(url=data["img"])
+                embed.set_footer(text=data["footer"])
+                embed.set_thumbnail(url=data["a_ico"])
+                channel = self.bot.get_channel(746500764633006150)
+                if data["content"] == Embed.Empty:
+                    self.bot.loop.create_task(channel.send(embed=embed))
+                else:
+                    self.bot.loop.create_task(channel.send(embed=embed,content=data["content"]))
+                    
 
 
-                conn.send(str(r.content).encode())  # send data to the client
+                conn.send(str("r.content").encode())  # send data to the client
 
             conn.close()  # close the connection
 
