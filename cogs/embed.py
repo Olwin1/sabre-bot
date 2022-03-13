@@ -17,13 +17,14 @@ guild_ids = [704255331680911402]
 class Embeder(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        x = threading.Thread(target=self.server_program)
+        x = threading.Thread(target=self.entrypoint)
         x.start()
         
+    def entrypoint(self):
+        asyncio.run(self.server_program())
 
         
-
-    def server_program(self):
+    async def server_program(self):
         print(f"{fg(197)}Embed API Initiating{attr('reset')}")
         # get the hostname
         host = "localhost"
