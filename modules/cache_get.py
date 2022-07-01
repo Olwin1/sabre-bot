@@ -4,7 +4,8 @@ import psycopg
 import redis
 
 conn = psycopg.connect(dbname="sabre", user="postgres", password="jumper123", host="localhost")
-r = redis.Redis(host='161.97.86.11', port=6379, db=0, password="Q29ubmll")
+#r = redis.Redis(host='161.97.86.11', port=6379, db=0, password="Q29ubmll")
+r = redis.Redis(host='161.97.86.11', port=6379, db=0)
 def get_guild(guild_id):
     value = r.get(guild_id)
     if value is None:
@@ -12,7 +13,7 @@ def get_guild(guild_id):
         cur.execute("""SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
             automod_links, automod_invites, automod_mention, automod_swears, 
             welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel, 
-            modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick FROM guilds WHERE id=%s""", (guild_id,))
+            modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick, role_rewards_id, role_rewards_level, role_rewards_channel FROM guilds WHERE id=%s""", (guild_id,))
         selected = cur.fetchone()
         if selected is None:# If Guild Is Not Found... Create It
             cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
@@ -20,7 +21,7 @@ def get_guild(guild_id):
             cur.execute("""SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
             automod_links, automod_invites, automod_mention, automod_swears, 
             welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel, 
-            modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick FROM guilds WHERE id=%s""", (guild_id,))
+            modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick, reaction_roles, role_rewards_id, role_rewards_level, role_rewards_channel FROM guilds WHERE id=%s""", (guild_id,))
             selected = cur.fetchone()
     
             
@@ -67,7 +68,14 @@ def get_guild(guild_id):
                 "lock": selected[25],
                 "kick": selected[26],
             },
-            "members": []
+            "reaction_roles": selected[27],
+            "members": [],
+            "role_rewards": {
+                "id": selected[28],
+                "level": selected[29],
+                "channel": selected[30],
+                
+            }
             }
     
         
@@ -109,9 +117,9 @@ def create_member(guild, user_id):
     cur.execute("SELECT EXISTS(SELECT id FROM users WHERE id = %s)", (user_id,))
     if not cur.fetchone()[0]:
         cur.execute("INSERT INTO users (id) VALUES (%s)", (user_id,))
-    cur.execute("INSERT INTO members (user_id, guild_id, exp) VALUES (%s, %s, %s)", (user_id, guild["id"], 1))# Create Member.
+    cur.execute("INSERT INTO members (user_id, guild_id, exp) VALUES (%s, %s, %s)", (user_id, guild, 1))# Create Member.
     conn.commit()
-    cur.execute("SELECT user_id, exp, infraction_description, infraction_date FROM members WHERE user_id = %s AND guild_id=%s", (user_id, guild["id"]))
+    cur.execute("SELECT user_id, exp, infraction_description, infraction_date FROM members WHERE user_id = %s AND guild_id=%s", (user_id, guild))
     member = cur.fetchone()
     guild["members"].append({"user_id": member[0], "g_id": guild["id"], "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
     r.set(guild["id"], json.dumps(guild))
@@ -161,12 +169,12 @@ def make_space():
                 SET role_rewards=%s, toggle_moderation=%s,  toggle_automod=%s, toggle_welcomer=%s, toggle_autoresponder=%s, toggle_leveling=%s, toggle_autorole=%s, toggle_reactionroles=%s, toggle_music=%s, toggle_modlog=%s, 
                 automod_links=%s, automod_invites=%s, automod_mention=%s, automod_swears=%s, 
                 welcome_join_channel=%s, welcome_join_message=%s, welcome_join_role=%s, welcome_join_message_p=%s, welcome_leave_message=%s, welcome_leave_channel=%s, 
-                modlog_channel=%s, modlog_bans=%s, modlog_warns=%s, modlog_mutes=%s, modlog_purge=%s, modlog_lock=%s, modlog_kick=%s
+                modlog_channel=%s, modlog_bans=%s, modlog_warns=%s, modlog_mutes=%s, modlog_purge=%s, modlog_lock=%s, modlog_kick=%s, reaction_roles=%s, role_rewards_id=%s, role_rewards_level=%s, role_rewards_channel = %s
                 WHERE id=%s""", (g["role_rewards"], g["toggle"]["moderation"], g["toggle"]["automod"], g["toggle"]["welcomer"], g["toggle"]["autoresponder"], g["toggle"]["leveling"],
                                 g["toggle"]["autorole"], g["toggle"]["reactionroles"], g["toggle"]["music"], g["toggle"]["modlog"],
                                 g["automod"]["links"], g["automod"]["invites"], g["automod"]["mention"], g["automod"]["swears"],
                                 g["welcome"]["join"]["channel"], g["welcome"]["join"]["message"], g["welcome"]["join"]["role"], g["welcome"]["join"]["private"], g["welcome"]["leave"]["message"], g["welcome"]["leave"]["channel"],
-                                g["modlog"]["channel"], g["modlog"]["bans"], g["modlog"]["warns"], g["modlog"]["mutes"], g["modlog"]["purge"], g["modlog"]["lock"], g["modlog"]["kick"],
+                                g["modlog"]["channel"], g["modlog"]["bans"], g["modlog"]["warns"], g["modlog"]["mutes"], g["modlog"]["purge"], g["modlog"]["lock"], g["modlog"]["kick"], g["reaction_roles"], g["role_rewards"]["id"], g["role_rewards"]["level"], g["role_rewards"]["channel"], 
                                 g["id"]
                                 ))
             
