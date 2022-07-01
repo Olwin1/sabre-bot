@@ -42,8 +42,10 @@ class Embeder(commands.Cog):
 
                     print("Status:", response.status)
                     print("Content-type:", response.headers['content-type'])
-
-                    return await response.json()
+                    if response.status == 429:
+                        return await getUserGuilds(token)
+                    else:
+                        return await response.json()
 
         server_socket = socket.socket()  # get instance
         # look closely. The bind() function takes tuple as argument
@@ -97,10 +99,9 @@ class Embeder(commands.Cog):
                 elif typ == "getGuilds":
 
 
-
-                    #retval = asyncio.run(getUserGuilds("Bearer " + data["token"]))
-                    guilds = await getUserGuilds("Bearer " + data["token"])
+                    guilds = data["guilds"]
                     retval["guilds"] = []
+
                     for i in guilds:
                         perms = Permissions(int(i["permissions"]))
                         if perms.manage_guild:
@@ -110,7 +111,6 @@ class Embeder(commands.Cog):
                             else:
                                 y["hasSabre"] = False
                             retval["guilds"].append(y)
-                                
                                 
                             
                     
