@@ -7,3 +7,8 @@ __pycache__
 
 #Remove Token
 *.key
+*.pem
+node_modules/
+__pycache__
+package-lock.json
+.env
