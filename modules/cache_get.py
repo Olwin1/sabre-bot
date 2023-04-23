@@ -1,35 +1,45 @@
 import json
 
+# Importing necessary libraries
 import psycopg
 import redis
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
+# Establishing a connection to a PostgreSQL database
 conn = psycopg.connect(dbname="sabre", user="postgres", password=os.getenv("PASSWORD"), host="localhost")
-#r = redis.Redis(host='161.97.86.11', port=6379, db=0, password="***REMOVED***")
+
+# Establishing a connection to a Redis database
 r = redis.Redis(host='161.97.86.11', port=6379, db=0)
+
+# A function to get guild information from Redis or PostgreSQL databases
 def get_guild(guild_id):
+    # Trying to get the value for the specified key (guild_id) from Redis
     value = r.get(guild_id)
+    # If the value does not exist in Redis, querying the PostgreSQL database to retrieve it
     if value is None:
         cur = conn.cursor()
-        cur.execute("""SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
+        # Retrieving all guild information from the PostgreSQL database for the specified guild_id
+        cur.execute("""SELECT role_rewards, toggle_moderation, toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
             automod_links, automod_invites, automod_mention, automod_swears, 
             welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel, 
             modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick, role_rewards_id, role_rewards_level, role_rewards_channel FROM guilds WHERE id=%s""", (guild_id,))
+        # Fetching the results of the query
         selected = cur.fetchone()
-        if selected is None:# If Guild Is Not Found... Create It
+        # If the query does not return any results, creating a new record for the specified guild_id
+        if selected is None:
             cur.execute("INSERT INTO guilds (id) VALUES (%s)", (guild_id,))
             conn.commit()
-            cur.execute("""SELECT role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
+            # Querying the PostgreSQL database again to retrieve the newly created record
+            cur.execute("""SELECT role_rewards, toggle_moderation, toggle_automod, toggle_welcomer, toggle_autoresponder, toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, toggle_modlog, 
             automod_links, automod_invites, automod_mention, automod_swears, 
             welcome_join_channel, welcome_join_message, welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel, 
             modlog_channel, modlog_bans, modlog_warns, modlog_mutes, modlog_purge, modlog_lock, modlog_kick, reaction_roles, role_rewards_id, role_rewards_level, role_rewards_channel FROM guilds WHERE id=%s""", (guild_id,))
+            # Fetching the results of the query
             selected = cur.fetchone()
-    
-            
-            
-            
+
+        # Creating a dictionary with all the guild information for the specified guild_id 
         guild = {
             "id": guild_id, 
             "role_rewards": selected[0],
@@ -88,7 +98,6 @@ def get_guild(guild_id):
             guild["members"].append({"u_id": member[0], "g_id": guild_id, "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
             
         make_space()
-        make_space()
         r.set(guild["id"], json.dumps(guild))
             
         return guild
@@ -109,7 +118,6 @@ def get_user(arg):
             
         user = {"id": selected[0], "bday": selected[1]}
     
-        make_space()
         make_space()
         r.set(user["id"], json.dumps(user))
     else:
@@ -140,12 +148,9 @@ def find_member(guild, member_id):
             return guild, i
     guild = create_member(guild, member_id)
     find_member(guild, i)
-    
-    
 
 def update_guild(guild):
     r.set(guild["id"], json.dumps(guild))
-    
 
 def update_user(user):
     r.set(user["id"], json.dumps(user))
@@ -153,25 +158,19 @@ def update_user(user):
 def make_space():
     keys = []
     for key in r.scan_iter("*"):
-        #size = r.execute_command("MEMORY USAGE", key)
         idle = r.object("idletime", key)
         keys.append({"k": key, "i": idle})
-        # idle time is in seconds. This is 90days
-        #if idle > 7776000:
-        #    r.delete(key)
-    sorted_list = sorted(keys, key=lambda y: y["i"], reverse=True)
+
     x = True
     iter = 0
     while x:
         if r.info()['used_memory'] < 2097152000:
-        #if length < r.execute_command("MEMORY USAGE", keys[iter]["k"]):
             x = False
             break
         # SAVE CACHE TO SLOWSTORE
         g = get_guild(keys[iter]["k"])
         cur = conn.cursor()
         if "members" in g:
-
             cur.execute("""UPDATE guilds
                 SET role_rewards=%s, toggle_moderation=%s,  toggle_automod=%s, toggle_welcomer=%s, toggle_autoresponder=%s, toggle_leveling=%s, toggle_autorole=%s, toggle_reactionroles=%s, toggle_music=%s, toggle_modlog=%s, 
                 automod_links=%s, automod_invites=%s, automod_mention=%s, automod_swears=%s, 
@@ -189,14 +188,10 @@ def make_space():
                 cur.execute("UPDATE members SET exp=%s, infraction_description=%s, infraction_date=%s WHERE user_id = %s AND guild_id=%s", (member["exp"], member["infraction_description"], member["infraction_date"], member["u_id"], member["g_id"]))
             
         else:
-            cur.execute("UPDATE users SET birthday=%s WHERE id = %s", (g["bday"],g["id"]))
-            
+            cur.execute("UPDATE users SET birthday=%s WHERE id = %s", (g["bday"],g["id"]))      
         conn.commit()
-        
         #REMOVE CACHE
         r.delete
-        
-        
         #Increment Iter By 1
         iter += 1
 
@@ -214,14 +209,5 @@ def get_guildExists(guild_id):
     else:
         return True
 
-
-
 def __len__(self):
     return r.dbsize()
-
-#role_rewards, toggle_moderation,  toggle_automod, toggle_welcomer, toggle_autoresponder, 
-# toggle_leveling, toggle_autorole, toggle_reactionroles, toggle_music, 
-# toggle_modlog, automod_links, automod_invites, automod_mention, automod_swears, 
-# welcome_join_channel, welcome_join_message, 
-# welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel
-
