@@ -2,8 +2,11 @@ import json
 
 import psycopg
 import redis
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-conn = psycopg.connect(dbname="sabre", user="postgres", password="***REMOVED***", host="localhost")
+conn = psycopg.connect(dbname="sabre", user="postgres", password=os.getenv("PASSWORD"), host="localhost")
 #r = redis.Redis(host='161.97.86.11', port=6379, db=0, password="Q29ubmll")
 r = redis.Redis(host='161.97.86.11', port=6379, db=0)
 def get_guild(guild_id):
@@ -117,11 +120,13 @@ def create_member(guild, user_id):
     cur.execute("SELECT EXISTS(SELECT id FROM users WHERE id = %s)", (user_id,))
     if not cur.fetchone()[0]:
         cur.execute("INSERT INTO users (id) VALUES (%s)", (user_id,))
-    cur.execute("INSERT INTO members (user_id, guild_id, exp) VALUES (%s, %s, %s)", (user_id, guild, 1))# Create Member.
+    cur.execute("SELECT EXISTS(SELECT user_id FROM members WHERE user_id = %s AND guild_id = %s)", (user_id, int(guild["id"])))
+    if not cur.fetchone()[0]:
+        cur.execute("INSERT INTO members (user_id, guild_id, exp) VALUES (%s, %s, %s)", (user_id, int(guild["id"]), 1))# Create Member.
     conn.commit()
-    cur.execute("SELECT user_id, exp, infraction_description, infraction_date FROM members WHERE user_id = %s AND guild_id=%s", (user_id, guild))
+    cur.execute("SELECT user_id, exp, infraction_description, infraction_date FROM members WHERE user_id = %s AND guild_id=%s", (user_id, int(guild["id"])))
     member = cur.fetchone()
-    guild["members"].append({"user_id": member[0], "g_id": guild["id"], "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
+    guild["members"].append({"u_id": member[0], "g_id": int(guild["id"]), "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
     r.set(guild["id"], json.dumps(guild))
     return guild
     
@@ -131,7 +136,7 @@ def find_member(guild, member_id):
     for i, member in enumerate(guild["members"]):
         if member["u_id"] == member_id:
             return guild, i
-    create_member(guild["id"], member_id)
+    guild = create_member(guild, member_id)
     find_member(guild, i)
     
     
@@ -179,7 +184,7 @@ def make_space():
                                 ))
             
             for member in g["members"]:
-                cur.execute("UPDATE members SET exp=%s, infraction_description=%s, infraction_date=%s WHERE user_id = %s AND guild_id=%s", (member["exp"], member["infraction_description"], member["infraction_date"], member["user_id"], member["g_id"]))
+                cur.execute("UPDATE members SET exp=%s, infraction_description=%s, infraction_date=%s WHERE user_id = %s AND guild_id=%s", (member["exp"], member["infraction_description"], member["infraction_date"], member["u_id"], member["g_id"]))
             
         else:
             cur.execute("UPDATE users SET birthday=%s WHERE id = %s", (g["bday"],g["id"]))

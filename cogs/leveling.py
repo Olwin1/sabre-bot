@@ -227,7 +227,7 @@ class Leveling(commands.Cog):
 
 
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         if message.author == self.bot.user:# To Make Sure Not Responding To Bot's Own Message
             return
 
@@ -283,6 +283,11 @@ class Leveling(commands.Cog):
             y += x
             exp -= x
             level += 1
+            if level in guild["role_rewards"]["level"]:
+                i = guild["role_rewards"]["level"].index(level)
+                role = message.author.guild.get_role(int(guild["role_rewards"]["role"][i]))
+                if role is not None:
+                    message.author.add_roles(role)
         #Below Is What Happens After
         total_exp_next_display = x
         total_exp_next_actual = y
