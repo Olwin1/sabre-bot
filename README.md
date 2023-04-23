@@ -1,18 +1,2 @@
-# didactic-garbanzo
-Sabre Bot Customizablility and Security Rewrite.
-
-
-Dependencies:
-
-discord.py
-discord-py-slash-command
-cachetools
-psycopg
-Pillow
-PyNaCl
-redis
-Cryptography
-requests
-colored
-
-ADD FFMPEG TO PATH! (PYTHOn SCRIPTS)
+##Sabre Bot
+The front end of the sabre bot rewrite.  A discord bot designed to perform the same operations all the others can but it's entirely free.  Supporting features such as leveling, music, moderation and much more!
