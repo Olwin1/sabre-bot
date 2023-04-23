@@ -1,2 +1,2 @@
 ##Sabre Bot
-The front end of the sabre bot rewrite.  A discord bot designed to perform the same operations all the others can but it's entirely free.  Supporting features such as leveling, music, moderation and much more!
+The sabre bot rewrite.  A discord bot designed to perform the same operations all the others can but it's entirely free.  Supporting features such as leveling, music, moderation and much more!
