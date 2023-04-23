@@ -209,5 +209,6 @@ def get_guildExists(guild_id):
     else:
         return True
 
+
 def __len__(self):
     return r.dbsize()

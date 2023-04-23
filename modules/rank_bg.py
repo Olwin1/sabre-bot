@@ -30,3 +30,4 @@ def get_dominant_color(img):
     # Adding 40 to each RGB value to make the color slightly brighter
     retval = (temp[0] + 40, temp[1] + 40, temp[2] + 40)
     return retval
+
