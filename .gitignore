@@ -1,5 +1,4 @@
 #Ignore Pycache Files
-/cogs/__pycache__
 __pycache__
 
 #Remove VS Code File
@@ -12,3 +11,4 @@ node_modules/
 __pycache__
 package-lock.json
 .env
+*.pem
