@@ -79,7 +79,7 @@ def get_guild(guild_id):
                 "channel": selected[30],
                 
             }
-            }
+        }
     
         
         cur.execute("SELECT user_id, exp, infraction_description, infraction_date FROM members WHERE guild_id=%s", (guild_id,))
@@ -87,6 +87,7 @@ def get_guild(guild_id):
         for member in selected_members:
             guild["members"].append({"u_id": member[0], "g_id": guild_id, "exp": member[1], "infraction_description": member[2], "infraction_date": member[3]})
             
+        make_space()
         make_space()
         r.set(guild["id"], json.dumps(guild))
             
@@ -108,6 +109,7 @@ def get_user(arg):
             
         user = {"id": selected[0], "bday": selected[1]}
     
+        make_space()
         make_space()
         r.set(user["id"], json.dumps(user))
     else:
@@ -222,3 +224,4 @@ def __len__(self):
 # toggle_modlog, automod_links, automod_invites, automod_mention, automod_swears, 
 # welcome_join_channel, welcome_join_message, 
 # welcome_join_role, welcome_join_message_p, welcome_leave_message, welcome_leave_channel
+
