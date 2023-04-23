@@ -1,9 +1,5 @@
 import io
 import random
-
-
-
-
 import discord
 from cachetools import TTLCache, cached
 from discord import File
@@ -13,22 +9,9 @@ from modules import cache_get as cache
 from modules import rank_bg as background
 from PIL import Image, ImageDraw, ImageFont
 
-
-
-
-
-
-
-
 guild_ids = [704255331680911402]
 print("levleing is runnin")
 cooldown = TTLCache(maxsize=1024, ttl=20)
-
-
-
-
-
-
 
 
 @cached(cache=TTLCache(maxsize=1024, ttl=3600))# Cache To Remember If Needs Re-Ordering Or Not. Only Executes Function Minimum every 60 mins per guild
